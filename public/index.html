@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="th">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoiceChat — Piya Voice Communication</title>
+  <meta name="description"
+    content="Real-time voice chat application with high-quality audio, rooms, and Discord-inspired UI">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+  <!-- ─── Login Screen ─────────────────────────────────────────── -->
+  <div id="login-screen" class="login-screen">
+    <div class="login-bg-orbs">
+      <div class="orb orb-1"></div>
+      <div class="orb orb-2"></div>
+      <div class="orb orb-3"></div>
+    </div>
+    <div class="login-card">
+      <div class="login-logo">
+        <svg class="logo-icon" viewBox="0 0 48 48" fill="none">
+          <circle cx="24" cy="24" r="22" fill="url(#logoGrad)" />
+          <path d="M16 20c0-4.418 3.582-8 8-8s8 3.582 8 8v4c0 4.418-3.582 8-8 8s-8-3.582-8-8v-4z"
+            fill="rgba(255,255,255,0.25)" />
+          <rect x="22" y="32" width="4" height="6" rx="2" fill="rgba(255,255,255,0.3)" />
+          <path d="M14 26a10 10 0 0020 0" stroke="rgba(255,255,255,0.3)" stroke-width="2" fill="none" />
+          <circle cx="20" cy="20" r="1.5" fill="white" />
+          <circle cx="28" cy="20" r="1.5" fill="white" />
+          <path d="M21 24c0 1.657 1.343 3 3 3s3-1.343 3-3" stroke="white" stroke-width="1.5" stroke-linecap="round"
+            fill="none" />
+          <defs>
+            <linearGradient id="logoGrad" x1="0" y1="0" x2="48" y2="48">
+              <stop offset="0%" stop-color="#5865F2" />
+              <stop offset="100%" stop-color="#EB459E" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <h1 class="login-title">VoiceChat</h1>
+      <p class="login-subtitle">เชื่อมต่อเสียงคุณกับทุกคน</p>
+      <form id="login-form">
+        <div class="input-group">
+          <input type="text" id="username-input" placeholder="ใส่ชื่อของคุณ" maxlength="20" autocomplete="off" required>
+          <div class="input-highlight"></div>
+        </div>
+        <button type="submit" class="btn-login" id="btn-join">
+          <span>เข้าร่วม</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14M12 5l7 7-7 7" />
+          </svg>
+        </button>
+      </form>
+      <div class="login-features">
+        <div class="feature">
+          <span class="feature-icon">🎙️</span>
+          <span>เสียงคุณภาพสูง</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">🔊</span>
+          <span>หลายห้อง</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">⚡</span>
+          <span>เรียลไทม์</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Main App ─────────────────────────────────────────────── -->
+  <div id="app" class="app hidden">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="server-icon">
+          <svg viewBox="0 0 48 48" fill="none" width="32" height="32">
+            <circle cx="24" cy="24" r="22" fill="url(#sideLogoGrad)" />
+            <path d="M16 20c0-4.418 3.582-8 8-8s8 3.582 8 8v4c0 4.418-3.582 8-8 8s-8-3.582-8-8v-4z"
+              fill="rgba(255,255,255,0.25)" />
+            <circle cx="20" cy="20" r="1.5" fill="white" />
+            <circle cx="28" cy="20" r="1.5" fill="white" />
+            <defs>
+              <linearGradient id="sideLogoGrad" x1="0" y1="0" x2="48" y2="48">
+                <stop offset="0%" stop-color="#5865F2" />
+                <stop offset="100%" stop-color="#EB459E" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="server-info">
+          <h2 class="server-name">VoiceChat</h2>
+          <span class="server-status" id="online-count">0 Online</span>
+        </div>
+      </div>
+
+      <div class="channel-category">
+        <span class="category-label">🔊 VOICE CHANNELS</span>
+      </div>
+
+      <div class="room-list" id="room-list">
+        <!-- Rooms will be injected here by JS -->
+      </div>
+
+      <!-- User Panel (bottom) -->
+      <div class="user-panel" id="user-panel">
+        <div class="user-info">
+          <div class="user-avatar" id="my-avatar">
+            <span id="my-avatar-letter">U</span>
+          </div>
+          <div class="user-details">
+            <span class="user-name" id="my-username">Username</span>
+            <span class="user-status-text" id="my-status">Online</span>
+          </div>
+        </div>
+        <div class="user-controls">
+          <button class="control-btn" id="btn-mute" title="Mute" disabled>
+            <svg class="icon-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="9" y="1" width="6" height="11" rx="3" />
+              <path d="M5 10a7 7 0 0014 0" />
+              <line x1="12" y1="17" x2="12" y2="21" />
+              <line x1="8" y1="21" x2="16" y2="21" />
+            </svg>
+            <svg class="icon-mic-off hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="1" y1="1" x2="23" y2="23" />
+              <path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6" />
+              <path d="M17 16.95A7 7 0 015 12m14 0a7 7 0 01-.11 1.23" />
+              <line x1="12" y1="19" x2="12" y2="23" />
+              <line x1="8" y1="23" x2="16" y2="23" />
+            </svg>
+          </button>
+          <button class="control-btn" id="btn-deafen" title="Deafen" disabled>
+            <svg class="icon-headphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 18v-6a9 9 0 0118 0v6" />
+              <path
+                d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z" />
+            </svg>
+            <svg class="icon-headphone-off hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              stroke-width="2">
+              <line x1="1" y1="1" x2="23" y2="23" />
+              <path d="M3 18v-6a9 9 0 0114.88-6.82" />
+              <path d="M21 12v6" />
+              <path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3z" />
+              <path d="M3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z" />
+            </svg>
+          </button>
+          <button class="control-btn btn-disconnect hidden" id="btn-disconnect" title="Disconnect">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 8l-8 8M8 8l8 8" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Default View (no room selected) -->
+      <div class="welcome-view" id="welcome-view">
+        <div class="welcome-illustration">
+          <div class="pulse-ring"></div>
+          <div class="pulse-ring delay-1"></div>
+          <div class="pulse-ring delay-2"></div>
+          <svg viewBox="0 0 120 120" width="120" height="120" fill="none">
+            <circle cx="60" cy="60" r="55" fill="url(#welcomeGrad)" opacity="0.15" />
+            <circle cx="60" cy="60" r="40" fill="url(#welcomeGrad)" opacity="0.25" />
+            <path d="M48 52c0-6.627 5.373-12 12-12s12 5.373 12 12v6c0 6.627-5.373 12-12 12s-12-5.373-12-12v-6z"
+              fill="url(#welcomeGrad)" />
+            <rect x="56" y="76" width="8" height="10" rx="4" fill="url(#welcomeGrad)" />
+            <path d="M42 62a18 18 0 0036 0" stroke="url(#welcomeGrad)" stroke-width="3" fill="none" />
+            <defs>
+              <linearGradient id="welcomeGrad" x1="0" y1="0" x2="120" y2="120">
+                <stop offset="0%" stop-color="#5865F2" />
+                <stop offset="100%" stop-color="#EB459E" />
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <h2 class="welcome-title">เลือกห้องเสียงเพื่อเริ่มพูดคุย</h2>
+        <p class="welcome-desc">คลิกที่ห้องเสียงด้านซ้ายเพื่อเข้าร่วมสนทนา</p>
+      </div>
+
+      <!-- Room View (when in a room) -->
+      <div class="room-view hidden" id="room-view">
+        <div class="room-header">
+          <div class="room-header-info">
+            <span class="room-header-icon">🔊</span>
+            <h2 class="room-header-name" id="current-room-name">General</h2>
+          </div>
+          <div class="room-header-actions">
+            <div class="connection-quality" id="connection-quality">
+              <div class="quality-bars">
+                <div class="bar bar-1 active"></div>
+                <div class="bar bar-2 active"></div>
+                <div class="bar bar-3 active"></div>
+                <div class="bar bar-4"></div>
+              </div>
+              <span class="quality-text">Voice Connected</span>
+            </div>
+          </div>
+        </div>
+        <div class="room-members" id="room-members">
+          <!-- Members will be injected here -->
+        </div>
+        <div class="room-footer">
+          <div class="voice-controls">
+            <button class="voice-btn" id="btn-mute-main" title="Toggle Mute">
+              <svg class="icon-mic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="1" width="6" height="11" rx="3" />
+                <path d="M5 10a7 7 0 0014 0" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+              </svg>
+              <svg class="icon-mic-off hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="1" y1="1" x2="23" y2="23" />
+                <path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6" />
+                <path d="M17 16.95A7 7 0 015 12m14 0a7 7 0 01-.11 1.23" />
+                <line x1="12" y1="19" x2="12" y2="23" />
+                <line x1="8" y1="23" x2="16" y2="23" />
+              </svg>
+              <span>Mute</span>
+            </button>
+            <button class="voice-btn" id="btn-deafen-main" title="Toggle Deafen">
+              <svg class="icon-headphone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 18v-6a9 9 0 0118 0v6" />
+                <path
+                  d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z" />
+              </svg>
+              <svg class="icon-headphone-off hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                stroke-width="2">
+                <line x1="1" y1="1" x2="23" y2="23" />
+                <path d="M3 18v-6a9 9 0 0114.88-6.82" />
+                <path d="M21 12v6" />
+                <path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3z" />
+                <path d="M3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z" />
+              </svg>
+              <span>Deafen</span>
+            </button>
+            <button class="voice-btn" id="btn-share" title="Share Screen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+              <span>Share</span>
+            </button>
+            <button class="voice-btn btn-leave" id="btn-leave" title="Leave Channel">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+              <span>Leave</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ─── Music Panel ────────────────────────────────────────────── -->
+  <div id="music-panel" class="music-panel hidden">
+    <div class="music-header">
+      <h3>
+        <span class="music-icon">🎵</span> Music Player
+      </h3>
+      <button id="btn-close-music" class="btn-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Current Song -->
+    <div class="current-song hidden" id="current-song-container">
+      <div class="song-artwork">
+        <img id="current-song-img" src="" alt="Album Art">
+        <div class="song-status-overlay">
+          <div class="visualizer-bars">
+            <div class="v-bar"></div>
+            <div class="v-bar"></div>
+            <div class="v-bar"></div>
+          </div>
+        </div>
+      </div>
+      <div class="song-info">
+        <div id="current-song-title" class="song-title">Song Title</div>
+        <div id="current-song-added-by" class="song-added-by">Added by User</div>
+        <div class="song-progress">
+          <div id="song-progress-bar" class="progress-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Search -->
+    <div class="music-search">
+      <input type="text" id="music-search-input" placeholder="Search YouTube...">
+      <button id="btn-search-music">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Search Results -->
+    <div id="search-results" class="search-results hidden"></div>
+
+    <!-- Queue -->
+    <div class="music-queue">
+      <h4>Queue</h4>
+      <div id="queue-list" class="queue-list">
+        <!-- Queue items -->
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="music-controls">
+      <button id="btn-toggle-play" class="btn-control" title="Play/Pause">
+        <svg id="icon-play" viewBox="0 0 24 24" fill="none" class="hidden" stroke="currentColor" stroke-width="2">
+          <polygon points="5 3 19 12 5 21 5 3"></polygon>
+        </svg>
+        <svg id="icon-pause" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="10" y1="4" x2="10" y2="20"></line>
+          <line x1="14" y1="4" x2="14" y2="20"></line>
+        </svg>
+      </button>
+
+      <button id="btn-skip-music" class="btn-control" title="Skip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="5 4 15 12 5 20 5 4"></polygon>
+          <line x1="19" y1="5" x2="19" y2="19"></line>
+        </svg>
+      </button>
+
+      <button id="btn-stop-music" class="btn-control stop" title="Stop">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="6" y="6" width="12" height="12"></rect>
+        </svg>
+      </button>
+
+      <div class="volume-control">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+        </svg>
+        <input type="range" id="music-volume" min="0" max="100" value="100">
+      </div>
+    </div>
+  </div>
+
+  <!-- Music Floating Button -->
+  <button id="btn-toggle-music" class="btn-floating-music hidden">
+    🎵
+  </button>
+
+  <!-- Hidden YouTube Player -->
+  <div id="youtube-player-container">
+    <div id="youtube-player"></div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <!-- Alert Modal -->
+  <div id="alert-modal" class="modal-overlay hidden rule-z-index-9999">
+    <div class="modal-card alert-card">
+      <div class="alert-icon-wrapper">
+        <svg id="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <!-- Icon injected by JS -->
+        </svg>
+      </div>
+      <h3 id="alert-title" class="alert-title">Title</h3>
+      <p id="alert-message" class="alert-message">Message goes here...</p>
+      <div class="modal-actions alert-actions">
+        <button id="btn-alert-cancel" class="btn-modal btn-modal-cancel hidden">Cancel</button>
+        <button id="btn-alert-ok" class="btn-modal btn-modal-save">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="/js/voice.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+
+</html>
