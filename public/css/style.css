@@ -446,6 +446,7 @@ body {
   width: 80%;
   height: 4px;
   -webkit-appearance: none;
+  appearance: none;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 2px;
   outline: none;
@@ -1749,6 +1750,7 @@ body {
   width: 60px;
   height: 4px;
   -webkit-appearance: none;
+  appearance: none;
   background: rgba(255, 255, 255, 0.2);
   border-radius: 2px;
   outline: none;
@@ -1903,4 +1905,74 @@ body {
   height: 1px;
   opacity: 0;
   pointer-events: none;
+}
+
+/* ─── VoiceMod Modal ───────────────────────────────────────────── */
+.voicemod-card {
+  width: 500px;
+  text-align: left;
+}
+
+.voicemod-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.effect-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius);
+  padding: 16px 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: var(--transition);
+  color: var(--text-secondary);
+}
+
+.effect-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.effect-btn.active {
+  background: rgba(88, 101, 242, 0.2);
+  border-color: var(--accent);
+  color: var(--text-primary);
+  box-shadow: 0 0 16px rgba(88, 101, 242, 0.2);
+}
+
+.effect-icon {
+  font-size: 28px;
+}
+
+.effect-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.voicemod-status {
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  font-size: 14px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.voicemod-status span {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* VoiceMod Button Active State */
+#btn-voicemod.active {
+  color: var(--accent);
+  background: rgba(88, 101, 242, 0.1);
 }

@@ -3,7 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const YouTube = require('youtube-sr').default;
+const ytSearch = require('yt-search');
 
 const app = express();
 const server = http.createServer(app);
@@ -296,14 +296,16 @@ io.on('connection', (socket) => {
     try {
       if (!query) return;
       console.log('Searching for:', query);
-      const videos = await YouTube.search(query, { limit: 5 });
+
+      const r = await ytSearch(query);
+      const videos = r.videos.slice(0, 5);
 
       const formattedResults = videos.map(v => ({
-        videoId: v.id,
+        videoId: v.videoId,
         title: v.title,
-        thumbnail: v.thumbnail ? v.thumbnail.url : '',
-        channelTitle: v.channel ? v.channel.name : 'Unknown',
-        duration: v.durationFormatted
+        thumbnail: v.thumbnail,
+        channelTitle: v.author.name,
+        duration: v.timestamp
       }));
 
       socket.emit('music:search-results', formattedResults);

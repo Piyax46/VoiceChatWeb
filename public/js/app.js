@@ -108,6 +108,11 @@
     const btnDeafenMain = document.getElementById('btn-deafen-main');
     const btnLeave = document.getElementById('btn-leave');
     const btnShare = document.getElementById('btn-share');
+    const btnVoicemod = document.getElementById('btn-voicemod');
+    const voicemodModal = document.getElementById('voicemod-modal');
+    const btnCloseVoicemod = document.getElementById('btn-close-voicemod');
+    const effectBtns = document.querySelectorAll('.effect-btn');
+    const currentEffectNameEl = document.getElementById('current-effect-name');
 
     // ─── State ──────────────────────────────────────────────────
     let socket = null;
@@ -197,6 +202,7 @@
             // Enable controls
             btnMute.disabled = false;
             btnDeafen.disabled = false;
+            btnVoicemod.disabled = false;
             btnShare.disabled = false;
             btnDisconnect.classList.remove('hidden');
 
@@ -499,6 +505,7 @@
         currentRoomId = null;
         btnMute.disabled = true;
         btnDeafen.disabled = true;
+        btnVoicemod.disabled = true;
 
         // Reset share button
         if (isSharingScreen) {
@@ -752,6 +759,48 @@
         showToast('⏹️', 'หยุดแชร์หน้าจอ', 'info');
     }
 
+    // ─── VoiceMod Logic ─────────────────────────────────────────
+
+    btnVoicemod.addEventListener('click', () => {
+        voicemodModal.classList.remove('hidden');
+    });
+
+    btnCloseVoicemod.addEventListener('click', () => {
+        voicemodModal.classList.add('hidden');
+    });
+
+    // Close on outside click
+    voicemodModal.addEventListener('click', (e) => {
+        if (e.target === voicemodModal) {
+            voicemodModal.classList.add('hidden');
+        }
+    });
+
+    effectBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const effect = btn.dataset.effect;
+            const effectName = btn.querySelector('.effect-name').textContent;
+
+            if (voice) {
+                voice.setEffect(effect);
+
+                // Update UI
+                effectBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentEffectNameEl.textContent = effectName;
+
+                // Toggle active state on main button
+                if (effect === 'normal') {
+                    btnVoicemod.classList.remove('active');
+                } else {
+                    btnVoicemod.classList.add('active');
+                }
+
+                showToast('🎤', `Changed voice to ${effectName}`, 'success');
+            }
+        });
+    });
+
     // ─── Video UI Handling ──────────────────────────────────────
     function updateMemberVideo(peerId, stream, isAdding) {
         const card = document.getElementById(`member-${peerId}`);
@@ -847,12 +896,7 @@
     function onPlayerReady(event) {
         console.log("YouTube Player Ready");
         player.setVolume(100);
-        if (musicState.isPlaying && musicState.current) {
-            // If we joined and music is already playing
-            const currentServerTime = (Date.now() - musicState.startTime) / 1000;
-            player.loadVideoById(musicState.current.videoId, currentServerTime);
-            // playVideo() is redundant if loadVideoById is used, but safe
-        }
+        syncMusicPlayer();
     }
 
     function onPlayerError(event) {
@@ -961,39 +1005,10 @@
         });
 
         socket.on('music:state', (state) => {
+            console.log('[Music] State received:', state);
             musicState = state;
             updateMusicUI();
-
-            // Sync Player State
-            if (player && player.getPlayerState) {
-                const playerState = player.getPlayerState();
-
-                // Check if we need to load the correct video
-                if (musicState.current) {
-                    const currentVideoData = player.getVideoData();
-                    if (!currentVideoData || currentVideoData.video_id !== musicState.current.videoId) {
-                        const currentServerTime = (Date.now() - musicState.startTime) / 1000;
-                        player.loadVideoById(musicState.current.videoId, currentServerTime);
-                        return; // loadVideoById handles play, wait for next state update
-                    }
-                }
-
-                if (musicState.isPlaying) {
-                    if (playerState !== YT.PlayerState.PLAYING && playerState !== YT.PlayerState.BUFFERING) {
-                        player.playVideo();
-                    }
-                    // Sync time if drift > 2s
-                    const currentServerTime = (Date.now() - musicState.startTime) / 1000;
-                    const currentPlayerTime = player.getCurrentTime();
-                    if (Math.abs(currentServerTime - currentPlayerTime) > 2) {
-                        player.seekTo(currentServerTime, true);
-                    }
-                } else {
-                    if (playerState === YT.PlayerState.PLAYING) {
-                        player.pauseVideo();
-                    }
-                }
-            }
+            syncMusicPlayer();
         });
 
         socket.on('music:play', (song) => {
@@ -1008,6 +1023,56 @@
             showToast('🛑', 'Music Stopped', 'info');
         });
     };
+
+    function syncMusicPlayer() {
+        if (!player || !player.loadVideoById) {
+            console.warn('[Music] Player not ready yet');
+            return;
+        }
+
+        if (musicState.isPlaying && musicState.current) {
+            const currentVideoData = player.getVideoData();
+            // Calculate start time (handle negative drift)
+            let startSeconds = (Date.now() - musicState.startTime) / 1000;
+            if (startSeconds < 0) startSeconds = 0;
+
+            // If different video, load it
+            if (!currentVideoData || currentVideoData.video_id !== musicState.current.videoId) {
+                console.log('[Music] Loading new video:', musicState.current.videoId, 'at', startSeconds);
+                player.loadVideoById(musicState.current.videoId, startSeconds);
+                return;
+            } else {
+                // Even if video ID matches, if we are in unstarted/cued state, we must ensure play
+                const ps = player.getPlayerState();
+                if (ps === -1 || ps === 5) { // -1 unstarted, 5 cued
+                    player.loadVideoById(musicState.current.videoId, startSeconds);
+                    return;
+                }
+            }
+
+            // If same video but state mismatch
+            const playerState = player.getPlayerState();
+            if (playerState !== YT.PlayerState.PLAYING && playerState !== YT.PlayerState.BUFFERING) {
+                console.log('[Music] Resuming video');
+                player.playVideo();
+            }
+
+            // Sync time if drift > 2s
+            const currentPlayerTime = player.getCurrentTime();
+            if (Math.abs(startSeconds - currentPlayerTime) > 2) {
+                console.log('[Music] Syncing time. Server:', startSeconds, 'Player:', currentPlayerTime);
+                player.seekTo(startSeconds, true);
+            }
+        } else {
+            // Not playing
+            const playerState = player.getPlayerState();
+            if (playerState === YT.PlayerState.PLAYING || playerState === YT.PlayerState.BUFFERING) {
+                player.pauseVideo();
+            }
+        }
+    }
+
+
 
     function renderSearchResults(results) {
         searchResults.innerHTML = '';
@@ -1030,7 +1095,10 @@
             div.onclick = () => {
                 // Optimistic play for requester (bypass Autoplay Policy)
                 if (player && player.loadVideoById) {
-                    player.loadVideoById(video.videoId);
+                    // Add protection against re-loading the optimistically played video
+                    if (!musicState.current || musicState.current.videoId !== video.videoId) {
+                        player.loadVideoById(video.videoId);
+                    }
                     player.playVideo();
                 }
                 socket.emit('music:play', { videoId: video.videoId, title: video.title, thumbnail: video.thumbnail });

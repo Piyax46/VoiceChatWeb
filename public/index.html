@@ -149,6 +149,15 @@
               <path d="M3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z" />
             </svg>
           </button>
+          <button class="control-btn" id="btn-voicemod" title="Voice Effects" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+              <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+              <line x1="12" y1="19" x2="12" y2="23"></line>
+              <line x1="8" y1="23" x2="16" y2="23"></line>
+              <path d="M2 12h20" stroke-opacity="0.5" stroke-dasharray="2 2" />
+            </svg>
+          </button>
           <button class="control-btn btn-disconnect hidden" id="btn-disconnect" title="Disconnect">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M16 8l-8 8M8 8l8 8" />
@@ -358,6 +367,62 @@
   <button id="btn-toggle-music" class="btn-floating-music hidden">
     🎵
   </button>
+
+  <!-- VoiceMod Modal -->
+  <div id="voicemod-modal" class="modal-overlay hidden">
+    <div class="modal-card voicemod-card">
+      <div class="modal-header">
+        <h3>🎤 Voice Effects</h3>
+        <button id="btn-close-voicemod" class="btn-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="voicemod-grid">
+        <button class="effect-btn active" data-effect="normal">
+          <span class="effect-icon">👤</span>
+          <span class="effect-name">Normal</span>
+        </button>
+        <button class="effect-btn" data-effect="robot">
+          <span class="effect-icon">🤖</span>
+          <span class="effect-name">Robot</span>
+        </button>
+        <button class="effect-btn" data-effect="female">
+          <span class="effect-icon">👩</span>
+          <span class="effect-name">Woman</span>
+        </button>
+        <button class="effect-btn" data-effect="alien">
+          <span class="effect-icon">👽</span>
+          <span class="effect-name">Alien</span>
+        </button>
+        <button class="effect-btn" data-effect="chipmunk">
+          <span class="effect-icon">🐿️</span>
+          <span class="effect-name">High Pitch</span>
+        </button>
+        <button class="effect-btn" data-effect="monster">
+          <span class="effect-icon">👹</span>
+          <span class="effect-name">Low Pitch</span>
+        </button>
+        <button class="effect-btn" data-effect="echo">
+          <span class="effect-icon">🏞️</span>
+          <span class="effect-name">Echo</span>
+        </button>
+        <button class="effect-btn" data-effect="radio">
+          <span class="effect-icon">📻</span>
+          <span class="effect-name">Radio</span>
+        </button>
+        <button class="effect-btn" data-effect="telephone">
+          <span class="effect-icon">☎️</span>
+          <span class="effect-name">Phone</span>
+        </button>
+      </div>
+      <div class="voicemod-status">
+        Current Effect: <span id="current-effect-name">Normal</span>
+      </div>
+    </div>
+  </div>
 
   <!-- Hidden YouTube Player -->
   <div id="youtube-player-container">
