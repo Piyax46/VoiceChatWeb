@@ -22,6 +22,7 @@ function createWindow() {
             preload: path.join(__dirname, 'preload.js'),
             spellcheck: false,
             v8CacheOptions: 'code',
+            autoplayPolicy: 'no-user-gesture-required' // Allow audio to play without interaction
         },
         title: "So Mua VoiceChat",
         icon: path.join(__dirname, 'Icon.png'),
