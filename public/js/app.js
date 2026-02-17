@@ -271,6 +271,9 @@
                 voice.createPeerConnection(peer.id, socket, true);
             });
 
+            // Request music sync
+            socket.emit('music:sync');
+
             showToast('🔊', 'เข้าร่วมห้องเสียงแล้ว', 'success');
         });
 
@@ -967,18 +970,36 @@
     };
 
     function syncMusicPlayer() {
-        if (!player || !player.loadVideoById) return;
+        if (!player || typeof player.loadVideoById !== 'function') return;
+
         if (musicState.isPlaying && musicState.current) {
-            const cvd = player.getVideoData();
-            let startSeconds = Math.max(0, (Date.now() - musicState.startTime) / 1000);
-            if (!cvd || cvd.video_id !== musicState.current.videoId) { player.loadVideoById(musicState.current.videoId, startSeconds); return; }
-            const ps = player.getPlayerState();
-            if (ps === -1 || ps === 5) { player.loadVideoById(musicState.current.videoId, startSeconds); return; }
-            if (ps !== YT.PlayerState.PLAYING && ps !== YT.PlayerState.BUFFERING) player.playVideo();
-            if (Math.abs(startSeconds - player.getCurrentTime()) > 2) player.seekTo(startSeconds, true);
+            const currentTime = Math.max(0, (Date.now() - musicState.startTime) / 1000);
+            const currentVideoData = player.getVideoData();
+            const playerState = player.getPlayerState();
+
+            // Load video if not loaded or different video
+            if (!currentVideoData || currentVideoData.video_id !== musicState.current.videoId) {
+                player.loadVideoById({
+                    videoId: musicState.current.videoId,
+                    startSeconds: currentTime
+                });
+                return;
+            }
+
+            // Seek if drift > 2 seconds
+            if (Math.abs(currentTime - player.getCurrentTime()) > 2) {
+                player.seekTo(currentTime, true);
+            }
+
+            // Ensure playing
+            if (playerState !== YT.PlayerState.PLAYING && playerState !== YT.PlayerState.BUFFERING) {
+                player.playVideo();
+            }
         } else {
-            const ps = player.getPlayerState();
-            if (ps === YT.PlayerState.PLAYING || ps === YT.PlayerState.BUFFERING) player.pauseVideo();
+            const playerState = player.getPlayerState();
+            if (playerState === YT.PlayerState.PLAYING || playerState === YT.PlayerState.BUFFERING) {
+                player.pauseVideo();
+            }
         }
     }
 
