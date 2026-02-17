@@ -133,10 +133,23 @@ class VoiceEngine {
         }
     }
 
+
     // Callbacks
     onSpeaking(callback) {
         this.speakingCallback = callback;
     }
+
+    onVideo(callback) {
+        this.videoCallback = callback;
+    }
+
+    async resume() {
+        if (this.audioContext && this.audioContext.state === 'suspended') {
+            await this.audioContext.resume();
+            console.log('[Voice] AudioContext resumed');
+        }
+    }
+
 
     onVideo(callback) {
         this.videoCallback = callback;
@@ -757,7 +770,7 @@ class VoiceEngine {
         pc.addEventListener('negotiationneeded', async () => {
             if (!isInitiator) return;
             try {
-                const offer = await pc.createOffer();
+                const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
                 offer.sdp = this.enhanceAudioSDP(offer.sdp);
                 await pc.setLocalDescription(offer);
                 socket.emit('webrtc:offer', { to: peerId, offer: pc.localDescription });
@@ -845,7 +858,7 @@ class VoiceEngine {
         const peerData = this.peers.get(peerId);
         if (!peerData) return;
         try {
-            const offer = await peerData.pc.createOffer();
+            const offer = await peerData.pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
             offer.sdp = this.enhanceAudioSDP(offer.sdp);
             await peerData.pc.setLocalDescription(offer);
             socket.emit('webrtc:offer', { to: peerId, offer: peerData.pc.localDescription });

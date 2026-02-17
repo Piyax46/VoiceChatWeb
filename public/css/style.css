@@ -2541,3 +2541,351 @@ video {
     transform: scale(1) translateY(0);
   }
 }
+
+/* ─── Chat Attachment Button ─────────────────────────── */
+.btn-attach {
+  background: none;
+  border: none;
+  color: var(--text-secondary, #b5bac1);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.2s, background 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-attach:hover {
+  color: var(--text-primary, #fff);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ─── File Preview ───────────────────────────────────── */
+.file-preview {
+  position: relative;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.file-preview img,
+.file-preview video {
+  max-height: 120px;
+  max-width: 200px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.file-preview-name {
+  color: #b5bac1;
+  font-size: 0.85rem;
+}
+
+.file-preview-remove {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  background: rgba(237, 66, 69, 0.8);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  width: 22px;
+  height: 22px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.file-preview-remove:hover {
+  background: #ed4245;
+}
+
+/* ─── Media in Messages ──────────────────────────────── */
+.msg-media {
+  margin-top: 6px;
+}
+
+.msg-media img {
+  max-width: 320px;
+  max-height: 300px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: block;
+}
+
+.msg-media img:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.msg-media video {
+  max-width: 360px;
+  max-height: 300px;
+  border-radius: 8px;
+  display: block;
+  background: #000;
+}
+
+.msg-file a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(88, 101, 242, 0.15);
+  color: #7289da;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.88rem;
+  margin-top: 6px;
+  transition: background 0.2s;
+}
+
+.msg-file a:hover {
+  background: rgba(88, 101, 242, 0.3);
+}
+
+/* ─── Chat input bar fix for attachment ──────────────── */
+.chat-input-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ─── DM Button on Online Users ─────────────────────── */
+.btn-dm {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  flex-shrink: 0;
+  transition: color 0.2s, background 0.2s;
+  opacity: 0;
+}
+
+.online-user-item:hover .btn-dm {
+  opacity: 1;
+}
+
+.btn-dm:hover {
+  color: #5865F2;
+  background: rgba(88, 101, 242, 0.15);
+}
+
+.online-user-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ─── Logout Button ──────────────────────────────────── */
+.btn-logout {
+  color: var(--text-secondary, #b5bac1);
+}
+
+.btn-logout:hover {
+  color: #ed4245 !important;
+  background: rgba(237, 66, 69, 0.15) !important;
+}
+
+/* ─── Hidden YouTube Player ────────────────────────────── */
+#youtube-player-container {
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  width: 480px;
+  height: 270px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.member-card video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+/* Fullscreen video: fit to screen, don't crop/zoom */
+video:fullscreen,
+video:-webkit-full-screen {
+  object-fit: contain !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: #000 !important;
+  border-radius: 0 !important;
+}
+
+/* Fullscreen container */
+video::backdrop {
+  background: #000;
+}
+
+/* ─── Cinema Bot ────────────────────────────────────────────── */
+.btn-floating-music#btn-toggle-cinema {
+  bottom: 90px !important;
+  /* Above music button */
+  background: #E62117;
+  box-shadow: 0 4px 15px rgba(230, 33, 23, 0.4);
+}
+
+.btn-floating-music#btn-toggle-cinema:hover {
+  background: #ff0000;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 0, 0, 0.6);
+}
+
+/* Cinema Overlay */
+#cinema-overlay {
+  backdrop-filter: blur(10px);
+  z-index: 10000;
+  /* Topmost */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cinema-container {
+  background: #000;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 0 1px #333;
+  display: flex;
+  flex-direction: column;
+  width: 90vw;
+  height: 90vh;
+  max-width: 1600px;
+  max-height: 900px;
+  animation: modalPop 0.3s ease-out;
+}
+
+.cinema-header {
+  background: #121212;
+  padding: 12px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #333;
+}
+
+.cinema-header h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#cinema-player-wrapper {
+  flex: 1;
+  /* background: black; Removed for debugging */
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#cinema-player-wrapper iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+  border: none;
+}
+
+.cinema-controls {
+  background: #121212;
+  padding: 15px 30px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  border-top: 1px solid #333;
+}
+
+.cinema-controls .btn-control {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: #2b2d31;
+  color: #b5bac1;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.cinema-controls .btn-control:hover {
+  background: #E62117;
+  /* YouTube Red */
+  color: #fff;
+  transform: scale(1.1);
+}
+
+.cinema-controls .btn-control.stop:hover {
+  background: #ED4245;
+}
+
+#cinema-seekbar {
+  flex: 1;
+  -webkit-appearance: none;
+  background: #333;
+  height: 4px;
+  border-radius: 2px;
+  cursor: pointer;
+  accent-color: #E62117;
+}
+
+#cinema-seekbar::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #E62117;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+#cinema-seekbar::-webkit-slider-thumb:hover {
+  transform: scale(1.5);
+}
+
+#cinema-volume {
+  width: 80px;
+  -webkit-appearance: none;
+  background: #333;
+  height: 4px;
+  border-radius: 2px;
+  accent-color: #E62117;
+}
+
+/* Cinema Search Results */
+#cinema-search-results .search-result-item {
+  cursor: pointer;
+}
+
+#cinema-search-results .search-result-item:hover {
+  background: rgba(230, 33, 23, 0.1);
+}

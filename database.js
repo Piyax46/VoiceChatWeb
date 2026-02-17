@@ -37,7 +37,10 @@ db.exec(`
     sender_id INTEGER NOT NULL,
     receiver_id INTEGER DEFAULT NULL,
     room_id TEXT DEFAULT NULL,
-    content TEXT NOT NULL,
+    content TEXT DEFAULT '',
+    file_url TEXT DEFAULT NULL,
+    file_type TEXT DEFAULT NULL,
+    file_name TEXT DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (sender_id) REFERENCES users(id),
     FOREIGN KEY (receiver_id) REFERENCES users(id),
@@ -47,6 +50,17 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_messages_dm ON messages(sender_id, receiver_id);
   CREATE INDEX IF NOT EXISTS idx_messages_room ON messages(room_id);
 `);
+
+// Migration: add file columns if they don't exist
+try {
+    db.exec(`ALTER TABLE messages ADD COLUMN file_url TEXT DEFAULT NULL`);
+} catch (e) { /* column already exists */ }
+try {
+    db.exec(`ALTER TABLE messages ADD COLUMN file_type TEXT DEFAULT NULL`);
+} catch (e) { /* column already exists */ }
+try {
+    db.exec(`ALTER TABLE messages ADD COLUMN file_name TEXT DEFAULT NULL`);
+} catch (e) { /* column already exists */ }
 
 // ─── Insert Default Rooms ────────────────────────────────────
 const defaultRooms = [
@@ -150,17 +164,20 @@ function getRoomById(roomId) {
 
 // ─── Message Functions ───────────────────────────────────────
 
-function saveMessage(senderId, content, { receiverId = null, roomId = null }) {
+function saveMessage(senderId, content, { receiverId = null, roomId = null, fileUrl = null, fileType = null, fileName = null }) {
     const stmt = db.prepare(`
-    INSERT INTO messages (sender_id, receiver_id, room_id, content) VALUES (?, ?, ?, ?)
+    INSERT INTO messages (sender_id, receiver_id, room_id, content, file_url, file_type, file_name) VALUES (?, ?, ?, ?, ?, ?, ?)
   `);
-    const result = stmt.run(senderId, receiverId, roomId, content);
+    const result = stmt.run(senderId, receiverId, roomId, content || '', fileUrl, fileType, fileName);
     return {
         id: result.lastInsertRowid,
         sender_id: senderId,
         receiver_id: receiverId,
         room_id: roomId,
-        content,
+        content: content || '',
+        file_url: fileUrl,
+        file_type: fileType,
+        file_name: fileName,
         created_at: new Date().toISOString()
     };
 }

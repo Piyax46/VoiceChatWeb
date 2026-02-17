@@ -207,6 +207,13 @@
               <path d="M16 8l-8 8M8 8l8 8" />
             </svg>
           </button>
+          <button class="control-btn btn-logout" id="btn-logout" title="ออกจากระบบ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
         </div>
       </div>
     </aside>
@@ -322,6 +329,13 @@
         </div>
         <div class="chat-messages" id="chat-messages"></div>
         <div class="chat-input-bar">
+          <input type="file" id="file-input" accept="image/*,video/*" class="hidden" />
+          <button id="btn-attach-file" class="btn-attach" title="แนบรูปภาพหรือวิดีโอ">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
+              <path
+                d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48" />
+            </svg>
+          </button>
           <input type="text" id="chat-input" placeholder="พิมพ์ข้อความ..." maxlength="500" autocomplete="off">
           <button id="btn-send-message" class="btn-send">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -416,8 +430,46 @@
     </div>
   </div>
 
+  <!-- ─── Cinema Panel (Search) ────────────────────────────────── -->
+  <div id="cinema-panel" class="music-panel hidden" style="border-right: 2px solid #E62117;">
+    <div class="music-header">
+      <h3><span class="music-icon">🍿</span> Cinema Bot</h3>
+      <button id="btn-close-cinema" class="btn-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="music-search">
+      <input type="text" id="cinema-search-input" placeholder="Search Movies/Series...">
+      <button id="btn-search-cinema">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+      </button>
+    </div>
+    <div id="cinema-search-results" class="search-results hidden"></div>
+    <div class="music-queue">
+      <h4>Now Showing</h4>
+      <div id="cinema-current-info" class="queue-list" style="padding: 10px; color: #aaa; text-align: center;">
+        No video playing
+      </div>
+    </div>
+    <div class="music-controls">
+      <button id="btn-open-theatre" class="btn-control" title="Open Theatre Mode"
+        style="width: 100%; border-radius: 8px;">
+        📺 Open Theatre
+      </button>
+    </div>
+  </div>
+
   <!-- Music Floating Button -->
   <button id="btn-toggle-music" class="btn-floating-music hidden">🎵</button>
+  <!-- Cinema Floating Button -->
+  <button id="btn-toggle-cinema" class="btn-floating-music hidden"
+    style="bottom: 150px; background: #E62117;">🍿</button>
 
   <!-- VoiceMod Modal -->
   <div id="voicemod-modal" class="modal-overlay hidden">
@@ -520,6 +572,48 @@
       <div class="modal-actions alert-actions">
         <button id="btn-alert-cancel" class="btn-modal btn-modal-cancel hidden">Cancel</button>
         <button id="btn-alert-ok" class="btn-modal btn-modal-save">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Cinema Theatre Overlay ────────────────────────────────── -->
+  <div id="cinema-overlay" class="modal-overlay hidden" style="background: rgba(0,0,0,0.95); z-index: 10000;">
+    <div class="cinema-container" style="width: 90%; height: 80%; display: flex; flex-direction: column; gap: 10px;">
+      <div class="cinema-header"
+        style="display: flex; justify-content: space-between; align-items: center; color: white;">
+        <h3 id="cinema-title">Cinema Bot</h3>
+        <button id="btn-close-theatre" class="btn-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div id="cinema-player-wrapper" style="flex: 1; background: black; position: relative;">
+        <div id="cinema-player"></div>
+      </div>
+      <div class="cinema-controls"
+        style="display: flex; gap: 15px; justify-content: center; align-items: center; padding: 10px;">
+        <button id="btn-cinema-play" class="btn-control"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg></button>
+        <button id="btn-cinema-pause" class="btn-control hidden"><svg viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2">
+            <line x1="10" y1="4" x2="10" y2="20"></line>
+            <line x1="14" y1="4" x2="14" y2="20"></line>
+          </svg></button>
+        <input type="range" id="cinema-seekbar" min="0" value="0" style="flex: 1;">
+        <div class="volume-control">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          </svg>
+          <input type="range" id="cinema-volume" min="0" max="100" value="100">
+        </div>
+        <button id="btn-cinema-stop" class="btn-control stop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2">
+            <rect x="6" y="6" width="12" height="12"></rect>
+          </svg></button>
       </div>
     </div>
   </div>

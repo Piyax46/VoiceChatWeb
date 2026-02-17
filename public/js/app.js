@@ -58,6 +58,24 @@
     const volumeSlider = document.getElementById('music-volume');
     const toastContainer = document.getElementById('toast-container');
 
+    // ─── Cinema Elements (Global) ──────────────────────────────────
+    const btnToggleCinema = document.getElementById('btn-toggle-cinema');
+    const cinemaPanel = document.getElementById('cinema-panel');
+    const btnCloseCinema = document.getElementById('btn-close-cinema');
+    const btnSearchCinema = document.getElementById('btn-search-cinema');
+    const cinemaSearchInput = document.getElementById('cinema-search-input');
+    const cinemaSearchResults = document.getElementById('cinema-search-results');
+    const btnOpenTheatre = document.getElementById('btn-open-theatre');
+
+    const cinemaOverlay = document.getElementById('cinema-overlay');
+    const btnCloseTheatre = document.getElementById('btn-close-theatre');
+    const btnCinemaPlay = document.getElementById('btn-cinema-play');
+    const btnCinemaPause = document.getElementById('btn-cinema-pause');
+    const btnCinemaStop = document.getElementById('btn-cinema-stop');
+    const cinemaSeekbar = document.getElementById('cinema-seekbar');
+    const cinemaVolume = document.getElementById('cinema-volume');
+    const cinemaTitle = document.getElementById('cinema-title');
+
     const alertModal = document.getElementById('alert-modal');
     const alertTitle = document.getElementById('alert-title');
     const alertMessage = document.getElementById('alert-message');
@@ -108,6 +126,13 @@
     let roomsState = {};
     let onlineUsers = [];
     let isSharingScreen = false;
+
+    // Cinema State
+    let cinemaPlayer = null;
+    let cinemaState = { current: null, isPlaying: false, startTime: 0, pausedAt: null, active: false };
+    let isCinemaPanelOpen = false;
+    let activeVideoStreams = new Map(); // peerId -> stream (preserve across re-renders)
+    let pendingFileUpload = null; // { url, type, name }
 
     let player = null;
     let isMusicPanelOpen = false;
@@ -226,6 +251,7 @@
                 avatarData: currentUser.avatarData
             });
             if (window.setupMusicListeners) window.setupMusicListeners(socket);
+            if (window.setupCinemaListeners) window.setupCinemaListeners(socket);
         });
 
         socket.on('user:info', (user) => {
@@ -325,6 +351,15 @@
 
         socket.on('disconnect', () => {
             showAlert('ขาดการเชื่อมต่อ', 'กำลังเชื่อมต่อใหม่...', 'warning');
+        });
+
+        socket.on('session:kicked', ({ reason }) => {
+            if (voice) { voice.cleanup(); voice = null; }
+            socket.disconnect();
+            showAlert('ออกจากระบบ', reason || 'บัญชีนี้ถูกเข้าสู่ระบบจากที่อื่น', 'error', () => {
+                localStorage.removeItem('token');
+                location.reload();
+            });
         });
         socket.on('reconnect', () => {
             showToast('✅', 'เชื่อมต่อแล้ว', 'success');
@@ -527,6 +562,17 @@
     }
 
     // ─── Join / Leave Room ──────────────────────────────────────
+    function resumeAudioContext() {
+        if (voice) voice.resume();
+        // Also try to resume/unmute music player if it exists
+        if (player && typeof player.unMute === 'function') {
+            if (player.isMuted() || player.getVolume() === 0) {
+                player.unMute();
+                player.setVolume(100);
+            }
+        }
+    }
+
     function joinRoom(roomId) {
         resumeAudioContext();
         if (currentRoomId) leaveRoom();
@@ -544,6 +590,7 @@
         btnDisconnect.classList.add('hidden');
         resetMuteDeafenUI();
         if (btnToggleMusic) btnToggleMusic.classList.add('hidden');
+        if (btnToggleCinema) btnToggleCinema.classList.add('hidden');
         if (musicPanel) { musicPanel.classList.add('hidden'); isMusicPanelOpen = false; }
         showWelcomeView();
         updateUserPanel();
@@ -560,6 +607,10 @@
         renderRoomMembers();
         updateUserPanel();
         if (btnToggleMusic) btnToggleMusic.classList.remove('hidden');
+        if (btnToggleCinema) {
+            console.log('[UI] Showing Cinema Button');
+            btnToggleCinema.classList.remove('hidden');
+        }
     }
 
     function showWelcomeView() {
@@ -616,6 +667,26 @@
                 ${isSelf ? '<span class="member-tag you">คุณ</span>' : ''}
                 <div class="member-status">${statusIcons}</div>
             `;
+
+            // Re-attach video if this peer has an active stream
+            const existingStream = activeVideoStreams.get(u.id);
+            if (existingStream) {
+                card.classList.add('has-video');
+                const video = document.createElement('video');
+                video.autoplay = true; video.playsInline = true;
+                video.controls = true;
+                if (isSelf) video.muted = true;
+                video.title = 'Double-click for Fullscreen';
+                video.addEventListener('dblclick', () => {
+                    try {
+                        if (document.fullscreenElement) document.exitFullscreen();
+                        else if (video.requestFullscreen) video.requestFullscreen();
+                        else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
+                    } catch (e) { console.warn('[Video] Fullscreen failed:', e); }
+                });
+                video.srcObject = existingStream;
+                card.prepend(video);
+            }
 
             if (!isSelf) {
                 const slider = card.querySelector('.user-volume-slider');
@@ -682,6 +753,19 @@
     btnDeafenMain.addEventListener('click', toggleDeafen);
     btnLeave.addEventListener('click', leaveRoom);
 
+    // ─── Logout ──────────────────────────────────────────────────
+    const btnLogout = document.getElementById('btn-logout');
+    if (btnLogout) {
+        btnLogout.addEventListener('click', () => {
+            if (voice) { voice.cleanup(); voice = null; }
+            if (socket) socket.disconnect();
+            localStorage.removeItem('token');
+            fetch('/api/logout', { method: 'POST' }).finally(() => {
+                location.reload();
+            });
+        });
+    }
+
     // ─── Toast ──────────────────────────────────────────────────
     function showToast(icon, message, type = 'info') {
         const toast = document.createElement('div');
@@ -735,6 +819,13 @@
 
     // ─── Video UI ───────────────────────────────────────────────
     function updateMemberVideo(peerId, stream, isAdding) {
+        if (isAdding && stream) {
+            // Track stream so it survives re-renders
+            activeVideoStreams.set(peerId, stream);
+        } else {
+            activeVideoStreams.delete(peerId);
+        }
+
         const card = document.getElementById(`member-${peerId}`);
         if (!card) return;
         if (isAdding && stream) {
@@ -746,22 +837,12 @@
                 video.controls = true;
                 if (peerId === currentUser.socketId) video.muted = true;
                 video.title = 'Double-click for Fullscreen';
-
-                // Fullscreen on double click with Electron fallback
                 video.addEventListener('dblclick', () => {
                     try {
-                        if (document.fullscreenElement) {
-                            document.exitFullscreen();
-                        } else if (video.requestFullscreen) {
-                            video.requestFullscreen();
-                        } else if (video.webkitRequestFullscreen) {
-                            video.webkitRequestFullscreen();
-                        } else if (video.webkitEnterFullscreen) {
-                            video.webkitEnterFullscreen();
-                        }
-                    } catch (e) {
-                        console.warn('[Video] Fullscreen failed:', e);
-                    }
+                        if (document.fullscreenElement) document.exitFullscreen();
+                        else if (video.requestFullscreen) video.requestFullscreen();
+                        else if (video.webkitRequestFullscreen) video.webkitRequestFullscreen();
+                    } catch (e) { console.warn('[Video] Fullscreen failed:', e); }
                 });
                 card.prepend(video);
             }
@@ -793,8 +874,23 @@
                     <span class="online-user-name">${displayName}</span>
                     <span class="online-user-status">${u.roomId ? '🔊 ในห้องเสียง' : 'ออนไลน์'}</span>
                 </div>
+                ${!isSelf ? `<button class="btn-dm" title="ส่งข้อความส่วนตัว" data-user-id="${u.visitorId}" data-username="${u.username}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                    </svg>
+                </button>` : ''}
             `;
+
             if (!isSelf) {
+                // DM button click
+                const dmBtn = item.querySelector('.btn-dm');
+                if (dmBtn) {
+                    dmBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (u.visitorId) openDM(u.visitorId, u.username);
+                    });
+                }
+                // Also allow clicking the whole item
                 item.addEventListener('click', () => {
                     if (u.visitorId) openDM(u.visitorId, u.username);
                 });
@@ -841,6 +937,19 @@
         const isSelf = msg.sender_id === currentUser?.id;
         div.className = `chat-message ${isSelf ? 'self' : ''}`;
         const time = new Date(msg.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+        // Render media attachment if present
+        let mediaHtml = '';
+        if (msg.file_url) {
+            if (msg.file_type && msg.file_type.startsWith('image/')) {
+                mediaHtml = `<div class="msg-media"><img src="${msg.file_url}" alt="image" loading="lazy" onclick="window.open('${msg.file_url}','_blank')" /></div>`;
+            } else if (msg.file_type && msg.file_type.startsWith('video/')) {
+                mediaHtml = `<div class="msg-media"><video src="${msg.file_url}" controls preload="metadata"></video></div>`;
+            } else {
+                mediaHtml = `<div class="msg-file"><a href="${msg.file_url}" target="_blank" download>📎 ${msg.file_name || 'Download file'}</a></div>`;
+            }
+        }
+
         div.innerHTML = `
             <div class="msg-avatar" style="background:${msg.sender_color || '#5865F2'}">
                 ${msg.sender_avatar ? `<img src="${msg.sender_avatar}" />` : (msg.sender_username || 'U').charAt(0).toUpperCase()}
@@ -850,7 +959,8 @@
                     <span class="msg-author">${msg.sender_username}</span>
                     <span class="msg-time">${time}</span>
                 </div>
-                <div class="msg-text">${escapeHTML(msg.content)}</div>
+                ${msg.content ? `<div class="msg-text">${escapeHTML(msg.content)}</div>` : ''}
+                ${mediaHtml}
             </div>
         `;
         chatMessages.appendChild(div);
@@ -866,13 +976,111 @@
     function sendMessage() {
         if (!chatInput || !currentChatTarget || !socket) return;
         const content = chatInput.value.trim();
-        if (!content) return;
+        if (!content && !pendingFileUpload) return;
+
+        const msgData = { content: content || '' };
+        if (pendingFileUpload) {
+            msgData.file_url = pendingFileUpload.url;
+            msgData.file_type = pendingFileUpload.type;
+            msgData.file_name = pendingFileUpload.name;
+        }
+
         if (currentChatTarget.type === 'dm') {
-            socket.emit('message:send', { receiverId: currentChatTarget.userId, content });
+            socket.emit('message:send', { receiverId: currentChatTarget.userId, ...msgData });
         } else if (currentChatTarget.type === 'room') {
-            socket.emit('message:send', { roomId: currentChatTarget.roomId, content });
+            socket.emit('message:send', { roomId: currentChatTarget.roomId, ...msgData });
         }
         chatInput.value = '';
+        clearFilePreview();
+    }
+
+    // ─── File Upload ────────────────────────────────────────────
+    function clearFilePreview() {
+        pendingFileUpload = null;
+        const preview = document.getElementById('file-preview');
+        if (preview) preview.remove();
+    }
+
+    async function handleFileUpload(file) {
+        if (!file) return;
+        const maxSize = 10 * 1024 * 1024; // 10MB
+        if (file.size > maxSize) {
+            showToast('⚠️', 'ไฟล์ใหญ่เกิน 10MB', 'error');
+            return;
+        }
+
+        // Show preview
+        clearFilePreview();
+        const preview = document.createElement('div');
+        preview.id = 'file-preview';
+        preview.className = 'file-preview';
+
+        if (file.type.startsWith('image/')) {
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            preview.appendChild(img);
+        } else if (file.type.startsWith('video/')) {
+            const vid = document.createElement('video');
+            vid.src = URL.createObjectURL(file);
+            vid.controls = true;
+            vid.muted = true;
+            preview.appendChild(vid);
+        } else {
+            preview.innerHTML = `<span class="file-preview-name">📎 ${file.name}</span>`;
+        }
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'file-preview-remove';
+        removeBtn.textContent = '✕';
+        removeBtn.onclick = clearFilePreview;
+        preview.appendChild(removeBtn);
+
+        const inputBar = document.querySelector('.chat-input-bar');
+        if (inputBar) inputBar.parentNode.insertBefore(preview, inputBar);
+
+        // Upload file
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const res = await fetch('/api/upload', { method: 'POST', body: formData });
+            const data = await res.json();
+            if (data.success) {
+                pendingFileUpload = { url: data.url, type: file.type, name: file.name };
+            } else {
+                showToast('⚠️', 'อัปโหลดไฟล์ล้มเหลว', 'error');
+                clearFilePreview();
+            }
+        } catch (e) {
+            showToast('⚠️', 'อัปโหลดไฟล์ล้มเหลว', 'error');
+            clearFilePreview();
+        }
+    }
+
+    // Attach button handler
+    const btnAttach = document.getElementById('btn-attach-file');
+    const fileInputEl = document.getElementById('file-input');
+    if (btnAttach && fileInputEl) {
+        btnAttach.addEventListener('click', () => fileInputEl.click());
+        fileInputEl.addEventListener('change', (e) => {
+            if (e.target.files[0]) handleFileUpload(e.target.files[0]);
+            e.target.value = ''; // reset
+        });
+    }
+
+    // Paste image support
+    if (chatInput) {
+        chatInput.addEventListener('paste', (e) => {
+            const items = e.clipboardData?.items;
+            if (!items) return;
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    if (file) handleFileUpload(file);
+                    break;
+                }
+            }
+        });
     }
 
     if (btnSendMessage) btnSendMessage.addEventListener('click', sendMessage);
@@ -1107,39 +1315,64 @@
     document.addEventListener('touchstart', resumeAudioContext, { once: false }); // Add touch support
 
     function showUnmuteButton() {
-        let btn = document.getElementById('btn-force-unmute');
-        if (!btn) {
-            btn = document.createElement('button');
-            btn.id = 'btn-force-unmute';
-            btn.className = 'btn-floating-music rule-z-index-9999';
-            btn.style.bottom = '90px'; // Position above music toggle
-            btn.style.background = '#ED4245'; // Red to catch attention
-            btn.innerHTML = '🔇';
-            btn.title = 'Click to Unmute Music';
-            btn.addEventListener('click', () => {
-                resumeAudioContext();
-                btn.classList.add('hidden');
-                showToast('🔊', 'Music Unmuted', 'success');
-            });
-            document.body.appendChild(btn);
-        }
-        btn.classList.remove('hidden');
+        // Disabled as per user request (blocks cinema bot)
+        /*
+         if (document.getElementById('btn-unmute-overlay')) return;
+         const btn = document.createElement('button');
+         btn.id = 'btn-force-unmute';
+         btn.className = 'btn-floating-music rule-z-index-9999';
+         btn.style.bottom = '90px'; // Position above music toggle
+         btn.style.background = '#ED4245'; // Red to catch attention
+         btn.innerHTML = '🔇';
+         btn.title = 'Click to Unmute Music';
+         btn.addEventListener('click', () => {
+             resumeAudioContext();
+             btn.classList.add('hidden');
+             showToast('🔊', 'Music Unmuted', 'success');
+         });
+         document.body.appendChild(btn);
+         btn.classList.remove('hidden');
+        */
     }
 
 
     // ─── Music Player Logic ─────────────────────────────────────
+    let isSyncingCinema = false;
+
     window.onYouTubeIframeAPIReady = () => {
         console.log('[YouTube] API Ready');
+        // Music Player
         player = new YT.Player('youtube-player', {
             height: '100%', width: '100%', videoId: '',
             playerVars: {
-                playsinline: 1,
-                controls: 0,
-                disablekb: 1,
-                autoplay: 1,
-                enablejsapi: 1
+                playsinline: 1, controls: 0, disablekb: 1, autoplay: 1, enablejsapi: 1
             },
             events: { onReady: onPlayerReady, onStateChange: onPlayerStateChange, onError: onPlayerError }
+        });
+
+        // Cinema Player
+        cinemaPlayer = new YT.Player('cinema-player', {
+            height: '100%', width: '100%', videoId: '',
+            playerVars: {
+                playsinline: 1, controls: 1, disablekb: 1, autoplay: 1, enablejsapi: 1, rel: 0, modestbranding: 1
+            },
+            events: {
+                onReady: (e) => { e.target.setVolume(100); syncCinemaPlayer(); },
+                onStateChange: (e) => {
+                    if (isSyncingCinema) return;
+                    console.log('[Cinema] State (User):', e.data);
+                    if (e.data === YT.PlayerState.PLAYING) socket.emit('cinema:resume');
+                    else if (e.data === YT.PlayerState.PAUSED) socket.emit('cinema:pause');
+                    else if (e.data === YT.PlayerState.BUFFERING) {
+                        // Treat buffering as seek or load
+                        // Wait a bit to get accurate time?
+                        const t = e.target.getCurrentTime();
+                        if (t > 0) socket.emit('cinema:seek', t);
+                    }
+                    else if (e.data === YT.PlayerState.ENDED) socket.emit('cinema:stop');
+                },
+                onError: (e) => showToast('⚠️', `Cinema Error: ${e.data}`, 'error')
+            }
         });
     };
 
@@ -1154,7 +1387,19 @@
         if (event.data === YT.PlayerState.ENDED && socket) socket.emit('music:ended');
     }
 
-    if (btnToggleMusic) btnToggleMusic.addEventListener('click', () => { isMusicPanelOpen = !isMusicPanelOpen; musicPanel.classList.toggle('hidden', !isMusicPanelOpen); });
+    if (btnToggleMusic) {
+        btnToggleMusic.addEventListener('click', () => {
+            isMusicPanelOpen = !isMusicPanelOpen;
+            musicPanel.classList.toggle('hidden', !isMusicPanelOpen);
+            if (isMusicPanelOpen) {
+                // Close Cinema Panel to prevent overlap
+                if (isCinemaPanelOpen) {
+                    isCinemaPanelOpen = false;
+                    cinemaPanel.classList.add('hidden');
+                }
+            }
+        });
+    }
     if (btnCloseMusic) btnCloseMusic.addEventListener('click', () => { isMusicPanelOpen = false; musicPanel.classList.add('hidden'); });
 
     function searchMusic() { const q = musicSearchInput.value.trim(); if (q && socket) socket.emit('music:search', q); }
@@ -1223,7 +1468,6 @@
                 // Try to unmute automatically first
                 player.unMute();
                 player.setVolume(100);
-                if (player.isMuted()) showUnmuteButton();
             }
         } else {
             const playerState = player.getPlayerState();
@@ -1263,6 +1507,178 @@
             <div class="queue-item"><span class="queue-pos">${i + 1}</span><span class="queue-title">${s.title}</span><span class="queue-by">${s.addedBy}</span></div>
         `).join('') || '<div class="queue-empty">คิวว่าง</div>';
     }
+
+    // ─── Cinema Logic ─────────────────────────────────────────────
+
+    // UI Elements defined at top
+
+
+    // UI Toggles
+    if (btnToggleCinema) {
+        // Initially hidden, shown in showRoomView
+        btnToggleCinema.addEventListener('click', () => {
+            isCinemaPanelOpen = !isCinemaPanelOpen;
+            cinemaPanel.classList.toggle('hidden', !isCinemaPanelOpen);
+            if (isCinemaPanelOpen) {
+                musicPanel.classList.add('hidden');
+                isMusicPanelOpen = false;
+            }
+        });
+    }
+    if (btnCloseCinema) btnCloseCinema.addEventListener('click', () => { isCinemaPanelOpen = false; cinemaPanel.classList.add('hidden'); });
+
+    // Search
+    function searchCinema() {
+        const q = cinemaSearchInput.value.trim();
+        if (q && socket) socket.emit('cinema:search', q);
+    }
+    if (btnSearchCinema) btnSearchCinema.addEventListener('click', searchCinema);
+    if (cinemaSearchInput) cinemaSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchCinema(); });
+
+    // Theatre Mode
+    if (btnOpenTheatre) btnOpenTheatre.addEventListener('click', () => { cinemaOverlay.classList.remove('hidden'); });
+    if (btnCloseTheatre) btnCloseTheatre.addEventListener('click', () => { cinemaOverlay.classList.add('hidden'); });
+
+    // Controls
+    if (btnCinemaPlay) btnCinemaPlay.addEventListener('click', () => { if (socket) socket.emit('cinema:resume'); });
+    if (btnCinemaPause) btnCinemaPause.addEventListener('click', () => { if (socket) socket.emit('cinema:pause'); });
+    if (btnCinemaStop) btnCinemaStop.addEventListener('click', () => { if (socket) socket.emit('cinema:stop'); });
+
+    if (cinemaSeekbar) {
+        cinemaSeekbar.addEventListener('change', (e) => {
+            if (socket) socket.emit('cinema:seek', parseInt(e.target.value));
+        });
+    }
+    if (cinemaVolume) cinemaVolume.addEventListener('input', (e) => { if (cinemaPlayer?.setVolume) cinemaPlayer.setVolume(e.target.value); });
+
+    // Video Selection
+    window.selectCinemaVideo = (videoId, title, thumbnail, duration) => {
+        if (!socket) return;
+        socket.emit('cinema:play', { videoId, title, thumbnail, duration });
+        showToast('🍿', `Starting: ${title}`, 'success');
+        cinemaOverlay.classList.remove('hidden');
+    };
+
+    // Listeners
+    window.setupCinemaListeners = (s) => {
+        socket = s;
+        socket.on('cinema:search-results', (videos) => {
+            cinemaSearchResults.innerHTML = '';
+            cinemaSearchResults.classList.remove('hidden');
+            if (videos.length === 0) {
+                cinemaSearchResults.innerHTML = '<div style="padding:10px;text-align:center;">No results found</div>';
+                return;
+            }
+            videos.forEach(v => {
+                const el = document.createElement('div');
+                el.className = 'search-result-item';
+                el.innerHTML = `
+                    <img src="${v.thumbnail}" class="result-thumb" loading="lazy">
+                    <div class="result-info">
+                        <div class="result-title">${v.title}</div>
+                        <div class="result-channel">${v.channelTitle} • ${v.duration}</div>
+                    </div>
+                `;
+                el.onclick = () => window.selectCinemaVideo(v.videoId, v.title, v.thumbnail, v.duration);
+                cinemaSearchResults.appendChild(el);
+            });
+        });
+
+        socket.on('cinema:state', (state) => {
+            cinemaState = state;
+            syncCinemaPlayer();
+            updateCinemaUI();
+        });
+    };
+
+    function updateCinemaUI() {
+        if (cinemaState.active && cinemaState.current) {
+            if (cinemaTitle) cinemaTitle.textContent = `🍿 ${cinemaState.current.title}`;
+            const info = document.getElementById('cinema-current-info');
+            if (info) info.innerHTML = `
+                <div style="font-weight:bold;color:white;">${cinemaState.current.title}</div>
+                <div style="font-size:0.8em;">${cinemaState.isPlaying ? 'Playing' : 'Paused'}</div>
+            `;
+            if (cinemaState.isPlaying) {
+                btnCinemaPlay?.classList.add('hidden');
+                btnCinemaPause?.classList.remove('hidden');
+            } else {
+                btnCinemaPlay?.classList.remove('hidden');
+                btnCinemaPause?.classList.add('hidden');
+            }
+        } else {
+            if (cinemaTitle) cinemaTitle.textContent = 'Cinema Bot';
+            const info = document.getElementById('cinema-current-info');
+            if (info) info.innerHTML = 'No video playing';
+            btnCinemaPlay?.classList.remove('hidden');
+            btnCinemaPause?.classList.add('hidden');
+        }
+    }
+
+    function syncCinemaPlayer() {
+        if (!cinemaPlayer || typeof cinemaPlayer.loadVideoById !== 'function') return;
+
+        if (cinemaState.active && cinemaState.current) {
+            const currentTime = (!cinemaState.startTime) ? 0 : Math.max(0, (Date.now() - cinemaState.startTime) / 1000);
+
+            // Update seekbar
+            if (cinemaSeekbar) {
+                const dur = cinemaPlayer.getDuration();
+                if (dur > 0) cinemaSeekbar.max = dur;
+                if (document.activeElement !== cinemaSeekbar) cinemaSeekbar.value = currentTime;
+            }
+
+            const currentVideoData = cinemaPlayer.getVideoData();
+            // Load new video
+            if (!currentVideoData || currentVideoData.video_id !== cinemaState.current.videoId) {
+                console.log('[Cinema] Loading:', cinemaState.current.title);
+                cinemaPlayer.loadVideoById({ videoId: cinemaState.current.videoId, startSeconds: currentTime });
+                if (!cinemaState.isPlaying) cinemaPlayer.pauseVideo();
+                return;
+            }
+
+            // Sync Time
+            if (Math.abs(currentTime - cinemaPlayer.getCurrentTime()) > 2) {
+                cinemaPlayer.seekTo(currentTime, true);
+            }
+
+            // Play/Pause
+            const playerState = cinemaPlayer.getPlayerState();
+            if (cinemaState.isPlaying) {
+                if (playerState !== YT.PlayerState.PLAYING && playerState !== YT.PlayerState.BUFFERING) {
+                    console.log('[Cinema] forcing play');
+                    isSyncingCinema = true;
+                    cinemaPlayer.playVideo();
+                    setTimeout(() => isSyncingCinema = false, 1000); // 1s cooldown
+
+                    // Retry if needed
+                    setTimeout(() => {
+                        if (cinemaPlayer.getPlayerState() === -1 || cinemaPlayer.getPlayerState() === YT.PlayerState.CUED) {
+                            isSyncingCinema = true;
+                            cinemaPlayer.playVideo();
+                            setTimeout(() => isSyncingCinema = false, 1000);
+                        }
+                    }, 500);
+                }
+            } else {
+                if (playerState === YT.PlayerState.PLAYING || playerState === YT.PlayerState.BUFFERING) {
+                    isSyncingCinema = true;
+                    cinemaPlayer.pauseVideo();
+                    setTimeout(() => isSyncingCinema = false, 1000);
+                }
+            }
+        } else {
+            cinemaPlayer.stopVideo();
+        }
+    }
+
+    setInterval(() => {
+        if (cinemaState.isPlaying && cinemaPlayer && cinemaPlayer.getCurrentTime) {
+            if (cinemaSeekbar && document.activeElement !== cinemaSeekbar) {
+                cinemaSeekbar.value = cinemaPlayer.getCurrentTime();
+            }
+        }
+    }, 1000);
 
     // ─── Screen Picker Logic (Electron) ─────────────────────────
     const screenPickerModal = document.getElementById('screen-picker-modal');

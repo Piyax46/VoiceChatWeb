@@ -2,10 +2,12 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const ytSearch = require('yt-search');
 const session = require('express-session');
 const bodyParser = require('body-parser');
+const multer = require('multer');
 const database = require('./database');
 
 const app = express();
@@ -30,17 +32,41 @@ const io = new Server(server, {
 // Share session with Socket.IO
 io.engine.use(sessionMiddleware);
 
-// Music State
-const musicStates = new Map();
+
 
 // Serve static files
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Ensure uploads directory exists
+const uploadsDir = path.join(__dirname, 'public', 'uploads');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+// Multer config for file uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${Date.now()}-${uuidv4().slice(0, 8)}${ext}`);
+  }
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    const allowed = /image\/(jpeg|png|gif|webp)|video\/(mp4|webm|mov)/;
+    if (allowed.test(file.mimetype)) cb(null, true);
+    else cb(new Error('ไฟล์ที่รองรับ: รูปภาพ (JPEG, PNG, GIF, WebP) และวิดีโอ (MP4, WebM)'));
+  }
+});
 
 // ─── Runtime State ───────────────────────────────────────────
 const rooms = new Map();          // roomId -> { id, name, type, maxUsers, users: Map, createdBy }
 const users = new Map();          // socketId -> { id, visitorId, username, avatarColor, avatarData, roomId, muted, deafened }
 const onlineUsersByDbId = new Map(); // dbUserId -> socketId
 
+// Music & Cinema State
+const musicStates = new Map();    // roomId -> { queue: [], current: null, isPlaying: false, startTime: 0, pausedAt: null }
+const cinemaStates = new Map();   // roomId -> { current: null, isPlaying: false, startTime: 0, pausedAt: null, active: false }
 // Load rooms from database
 function loadRooms() {
   const dbRooms = database.getAllRooms();
@@ -55,6 +81,14 @@ function loadRooms() {
         isDefault: r.is_default,
         users: new Map()
       });
+
+      // Initialize states
+      if (!musicStates.has(r.id)) {
+        musicStates.set(r.id, { queue: [], current: null, isPlaying: false, startTime: 0, pausedAt: null });
+      }
+      if (!cinemaStates.has(r.id)) {
+        cinemaStates.set(r.id, { current: null, isPlaying: false, startTime: 0, pausedAt: null, active: false });
+      }
     }
   });
 }
@@ -204,6 +238,7 @@ app.delete('/api/rooms/:id', (req, res) => {
     rooms.delete(req.params.id);
   }
   musicStates.delete(req.params.id);
+  cinemaStates.delete(req.params.id); // Delete cinema state too
 
   io.emit('rooms:update', getRoomState());
   res.json({ success: true });
@@ -223,37 +258,54 @@ app.get('/api/messages/room/:roomId', (req, res) => {
   res.json({ messages: msgs });
 });
 
+// ─── File Upload API ─────────────────────────────────────────
+
+app.post('/api/upload', (req, res) => {
+  if (!req.session.userId) return res.status(401).json({ error: 'Not authenticated' });
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message });
+    }
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+    const url = `/uploads/${req.file.filename}`;
+    res.json({ success: true, url, type: req.file.mimetype, name: req.file.originalname });
+  });
+});
+
 // ─── Helpers ─────────────────────────────────────────────────
 
 function getRoomState() {
-  const state = {};
+  const result = {};
   rooms.forEach((room, id) => {
-    state[id] = {
+    result[id] = {
       id: room.id,
       name: room.name,
       type: room.type || 'voice',
       maxUsers: room.maxUsers,
       createdBy: room.createdBy,
       isDefault: room.isDefault,
-      users: []
+      users: Array.from(room.users.keys()).map(socketId => {
+        const u = users.get(socketId);
+        return {
+          socketId: socketId,
+          id: u.id,
+          username: u.username,
+          avatarColor: u.avatarColor,
+          avatarData: u.avatarData,
+          visitorId: u.visitorId,
+          muted: u.muted,
+          deafened: u.deafened,
+          speaking: false
+        };
+      }),
+      musicActive: musicStates.get(id)?.isPlaying || false,
+      cinemaActive: cinemaStates.get(id)?.active || false
     };
-    room.users.forEach((user) => {
-      state[id].users.push({
-        id: user.id,
-        visitorId: user.visitorId,
-        username: user.username,
-        avatarColor: user.avatarColor,
-        avatarData: user.avatarData,
-        muted: user.muted,
-        deafened: user.deafened,
-        speaking: false
-      });
-    });
 
     // Inject Music Bot if active
     const musicState = musicStates.get(id);
     if (musicState && (musicState.isPlaying || musicState.queue.length > 0)) {
-      state[id].users.push({
+      result[id].users.push({
         id: `bot-${id}`,
         username: 'Music Bot',
         avatarColor: '#5865F2',
@@ -263,8 +315,23 @@ function getRoomState() {
         isBot: true
       });
     }
+
+    // Inject Cinema Bot if active
+    const cinemaState = cinemaStates.get(id);
+    if (cinemaState && cinemaState.active) {
+      result[id].users.push({
+        id: `cinema-bot-${id}`,
+        username: 'Cinema Bot',
+        avatarColor: '#E62117', // YouTube Red
+        muted: false,
+        deafened: false,
+        speaking: cinemaState.isPlaying,
+        isBot: true,
+        isCinema: true
+      });
+    }
   });
-  return state;
+  return result;
 }
 
 function getOnlineUsers() {
@@ -288,6 +355,30 @@ io.on('connection', (socket) => {
 
   // User joins the app (authenticated)
   socket.on('user:join', ({ userId, username, avatarColor, avatarData }) => {
+    // ── Single session enforcement ──
+    if (userId) {
+      const existingSocketId = onlineUsersByDbId.get(userId);
+      if (existingSocketId && existingSocketId !== socket.id) {
+        const existingSocket = io.sockets.sockets.get(existingSocketId);
+        if (existingSocket) {
+          existingSocket.emit('session:kicked', { reason: 'บัญชีนี้ถูกเข้าสู่ระบบจากที่อื่น' });
+          // Clean up old connection
+          const oldUser = users.get(existingSocketId);
+          if (oldUser && oldUser.roomId) {
+            const room = rooms.get(oldUser.roomId);
+            if (room) {
+              room.users.delete(existingSocketId);
+              existingSocket.to(oldUser.roomId).emit('peer:left', { peerId: existingSocketId });
+              existingSocket.leave(oldUser.roomId);
+            }
+          }
+          users.delete(existingSocketId);
+          existingSocket.disconnect(true);
+          console.log(`[Session] Kicked old session ${existingSocketId} for user ${userId}`);
+        }
+      }
+    }
+
     const user = {
       id: socket.id,
       visitorId: userId || null,
@@ -387,6 +478,12 @@ io.on('connection', (socket) => {
       socket.emit('music:state', musicState);
     }
 
+    // Send current cinema state explicitly to the joiner
+    const cinemaState = cinemaStates.get(roomId);
+    if (cinemaState && cinemaState.active) {
+      socket.emit('cinema:state', cinemaState);
+    }
+
     io.emit('rooms:update', getRoomState());
     io.emit('users:online', getOnlineUsers());
     console.log(`[Room Join] ${user.username} -> ${room.name}`);
@@ -411,13 +508,16 @@ io.on('connection', (socket) => {
   });
 
   // ─── Direct Messaging ──────────────────────────────────────
-  socket.on('message:send', ({ receiverId, roomId, content }) => {
+  socket.on('message:send', ({ receiverId, roomId, content, file_url, file_type, file_name }) => {
     const user = users.get(socket.id);
-    if (!user || !user.visitorId || !content) return;
+    if (!user || !user.visitorId || (!content && !file_url)) return;
 
-    const msg = database.saveMessage(user.visitorId, content.trim(), {
+    const msg = database.saveMessage(user.visitorId, (content || '').trim(), {
       receiverId: receiverId || null,
-      roomId: roomId || null
+      roomId: roomId || null,
+      fileUrl: file_url || null,
+      fileType: file_type || null,
+      fileName: file_name || null
     });
 
     const enrichedMsg = {
@@ -638,6 +738,102 @@ io.on('connection', (socket) => {
         stopMusic(user.roomId);
       }
     }
+  });
+  // ─── Cinema Bot Events ────────────────
+  socket.on('cinema:search', async (query) => {
+    try {
+      const r = await ytSearch(query);
+      const videos = r.videos.slice(0, 10).map(v => ({
+        title: v.title, videoId: v.videoId, thumbnail: v.thumbnail,
+        duration: v.timestamp, channelTitle: v.author.name
+      }));
+      socket.emit('cinema:search-results', videos);
+    } catch (e) {
+      console.error(e);
+      socket.emit('cinema:error', 'Search failed');
+    }
+  });
+
+  socket.on('cinema:play', (video) => {
+    console.log(`[Cinema] Play request from ${socket.id}`);
+    const user = users.get(socket.id);
+    if (!user) { console.log('[Cinema] User not found'); return; }
+    if (!user.roomId) { console.log('[Cinema] User has no roomId'); return; }
+
+    const state = cinemaStates.get(user.roomId);
+    if (!state) { console.log(`[Cinema] No state for room ${user.roomId}`); return; }
+
+    console.log(`[Cinema] Playing ${video.title} in room ${user.roomId}`);
+    state.current = video;
+    state.isPlaying = true;
+    state.startTime = Date.now();
+    state.pausedAt = null;
+    state.active = true;
+
+    // Auto-pause music bot if playing
+    const mState = musicStates.get(user.roomId);
+    if (mState && mState.isPlaying) {
+      mState.isPlaying = false;
+      mState.pausedAt = Date.now() - mState.startTime;
+      io.to(user.roomId).emit('music:state', mState);
+    }
+
+    io.to(user.roomId).emit('cinema:state', state);
+    io.emit('rooms:update', getRoomState());
+  });
+
+  socket.on('cinema:pause', () => {
+    const user = users.get(socket.id);
+    if (!user || !user.roomId) return;
+    const state = cinemaStates.get(user.roomId);
+    if (state && state.isPlaying) {
+      state.isPlaying = false;
+      state.pausedAt = Date.now() - state.startTime;
+      io.to(user.roomId).emit('cinema:state', state);
+    }
+  });
+
+  socket.on('cinema:resume', () => {
+    const user = users.get(socket.id);
+    if (!user || !user.roomId) return;
+    const state = cinemaStates.get(user.roomId);
+    if (state && !state.isPlaying && state.current) {
+      state.isPlaying = true;
+      state.startTime = Date.now() - (state.pausedAt || 0);
+      state.pausedAt = null;
+      io.to(user.roomId).emit('cinema:state', state);
+    }
+  });
+
+  socket.on('cinema:seek', (seconds) => {
+    const user = users.get(socket.id);
+    if (!user || !user.roomId) return;
+    const state = cinemaStates.get(user.roomId);
+    if (state && state.current) {
+      state.startTime = Date.now() - (seconds * 1000);
+      if (!state.isPlaying) state.pausedAt = seconds * 1000;
+      io.to(user.roomId).emit('cinema:state', state);
+    }
+  });
+
+  socket.on('cinema:stop', () => {
+    const user = users.get(socket.id);
+    if (!user || !user.roomId) return;
+    const state = cinemaStates.get(user.roomId);
+    if (state) {
+      state.current = null;
+      state.isPlaying = false;
+      state.active = false;
+      io.to(user.roomId).emit('cinema:state', state);
+      io.emit('rooms:update', getRoomState());
+    }
+  });
+
+  socket.on('cinema:sync', () => {
+    const user = users.get(socket.id);
+    if (!user || !user.roomId) return;
+    const state = cinemaStates.get(user.roomId);
+    if (state) socket.emit('cinema:state', state);
   });
 });
 

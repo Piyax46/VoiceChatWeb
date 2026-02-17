@@ -44,6 +44,8 @@ function createWindow() {
 
     // Load the remote URL
     mainWindow.loadURL('https://voicechatweb.onrender.com');
+    // Load local dev server
+    // mainWindow.loadURL('http://localhost:3000');
 
     // Inject custom title bar after page loads
     mainWindow.webContents.on('did-finish-load', () => {
