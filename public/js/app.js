@@ -931,11 +931,35 @@
             if (musicState.isPlaying && player.getPlayerState() !== YT.PlayerState.PLAYING) {
                 player.playVideo();
             }
+            // Hide unmute button if it exists
+            const btn = document.getElementById('btn-force-unmute');
+            if (btn) btn.classList.add('hidden');
         }
     }
 
     document.addEventListener('click', resumeAudioContext, { once: false });
     document.addEventListener('keydown', resumeAudioContext, { once: false });
+    document.addEventListener('touchstart', resumeAudioContext, { once: false }); // Add touch support
+
+    function showUnmuteButton() {
+        let btn = document.getElementById('btn-force-unmute');
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.id = 'btn-force-unmute';
+            btn.className = 'btn-floating-music rule-z-index-9999';
+            btn.style.bottom = '90px'; // Position above music toggle
+            btn.style.background = '#ED4245'; // Red to catch attention
+            btn.innerHTML = '🔇';
+            btn.title = 'Click to Unmute Music';
+            btn.addEventListener('click', () => {
+                resumeAudioContext();
+                btn.classList.add('hidden');
+                showToast('🔊', 'Music Unmuted', 'success');
+            });
+            document.body.appendChild(btn);
+        }
+        btn.classList.remove('hidden');
+    }
 
 
     // ─── Music Player Logic ─────────────────────────────────────
@@ -1009,6 +1033,11 @@
             // Ensure playing
             if (playerState !== YT.PlayerState.PLAYING && playerState !== YT.PlayerState.BUFFERING) {
                 player.playVideo();
+            }
+
+            // Check if actually muted or blocked
+            if (player.isMuted() || player.getVolume() === 0) {
+                showUnmuteButton();
             }
         } else {
             const playerState = player.getPlayerState();
