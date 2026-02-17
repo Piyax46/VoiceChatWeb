@@ -745,21 +745,9 @@
                 video.autoplay = true; video.playsInline = true;
                 video.controls = true; // Enable native controls for reliability
                 if (peerId === currentUser.socketId) video.muted = true;
-                video.title = 'Double-click for Fullscreen';
+                video.title = 'Click Fullscreen Button';
 
-                // Toggle fullscreen on double click to avoid conflict with controls
-                video.addEventListener('dblclick', async () => {
-                    try {
-                        if (document.fullscreenElement) {
-                            await document.exitFullscreen();
-                        } else {
-                            await video.requestFullscreen();
-                        }
-                    } catch (err) {
-                        console.error('[Video] Fullscreen error:', err);
-                        showToast('⚠️', 'Fullscreen error', 'error');
-                    }
-                });
+                // Rely on native controls for fullscreen
                 card.prepend(video);
             }
             video.srcObject = stream;
@@ -987,10 +975,8 @@
             playerVars: {
                 playsinline: 1,
                 controls: 0,
-                disablekb: 1,
                 autoplay: 1,
-                enablejsapi: 1,
-                origin: window.location.origin
+                enablejsapi: 1
             },
             events: { onReady: onPlayerReady, onStateChange: onPlayerStateChange, onError: onPlayerError }
         });
