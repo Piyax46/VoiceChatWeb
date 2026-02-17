@@ -474,6 +474,24 @@
     </div>
   </div>
 
+  <!-- Screen Picker Modal -->
+  <div id="screen-picker-modal" class="modal-overlay hidden rule-z-index-9999">
+    <div class="modal-card screen-picker-card">
+      <div class="modal-header">
+        <h3>🖥️ เลือกหน้าจอที่ต้องการแชร์</h3>
+        <button id="btn-close-screen-picker" class="btn-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="screen-source-list" id="screen-source-list">
+        <!-- Sources will be injected here -->
+      </div>
+    </div>
+  </div>
+
   <!-- Hidden YouTube Player -->
   <div id="youtube-player-container">
     <div id="youtube-player"></div>

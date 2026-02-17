@@ -1013,4 +1013,39 @@
         `).join('') || '<div class="queue-empty">คิวว่าง</div>';
     }
 
+    // ─── Screen Picker Logic (Electron) ─────────────────────────
+    const screenPickerModal = document.getElementById('screen-picker-modal');
+    const screenSourceList = document.getElementById('screen-source-list');
+    const btnCloseScreenPicker = document.getElementById('btn-close-screen-picker');
+
+    if (screenPickerModal && btnCloseScreenPicker) {
+        btnCloseScreenPicker.addEventListener('click', () => {
+            screenPickerModal.classList.add('hidden');
+        });
+    }
+
+    if (window.electronAPI) {
+        window.electronAPI.onGetScreenSources((sources) => {
+            if (!screenPickerModal || !screenSourceList) return;
+
+            screenSourceList.innerHTML = '';
+            sources.forEach(source => {
+                const item = document.createElement('div');
+                item.className = 'screen-source-item';
+                item.innerHTML = `
+                    <div class="source-preview">
+                        <img src="${source.thumbnail.toDataURL()}" />
+                    </div>
+                    <div class="source-name">${source.name}</div>
+                `;
+                item.addEventListener('click', () => {
+                    window.electronAPI.selectScreenSource(source.id);
+                    screenPickerModal.classList.add('hidden');
+                });
+                screenSourceList.appendChild(item);
+            });
+            screenPickerModal.classList.remove('hidden');
+        });
+    }
+
 })();

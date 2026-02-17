@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell, desktopCapturer } = require('electron');
+const { app, BrowserWindow, shell, desktopCapturer, ipcMain } = require('electron');
 const path = require('path');
 
 // Memory optimization flags
@@ -7,6 +7,7 @@ app.commandLine.appendSwitch('disable-gpu-compositing');
 app.commandLine.appendSwitch('enable-features', 'V8VmFuture');
 
 let mainWindow;
+let screenPickerCallback = null;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -17,6 +18,7 @@ function createWindow() {
         webPreferences: {
             nodeIntegration: false,
             contextIsolation: true,
+            preload: path.join(__dirname, 'preload.js'),
             spellcheck: false,
             v8CacheOptions: 'code',
         },
@@ -42,9 +44,20 @@ function createWindow() {
 
     // Handle Screen Share Permissions
     mainWindow.webContents.session.setDisplayMediaRequestHandler((request, callback) => {
-        desktopCapturer.getSources({ types: ['screen'] }).then((sources) => {
-            callback({ video: sources[0], audio: 'loopback' });
+        desktopCapturer.getSources({ types: ['screen', 'window'] }).then((sources) => {
+            screenPickerCallback = callback;
+            mainWindow.webContents.send('get-screen-sources', sources);
+        }).catch((e) => {
+            console.error(e);
+            callback({ video: sources[0], audio: 'loopback' }); // Fallback
         });
+    });
+
+    ipcMain.on('select-screen-source', (event, sourceId) => {
+        if (screenPickerCallback) {
+            screenPickerCallback({ video: { id: sourceId }, audio: 'loopback' });
+            screenPickerCallback = null;
+        }
     });
 
     mainWindow.on('closed', function () {
