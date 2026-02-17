@@ -28,6 +28,7 @@ function createWindow() {
         icon: path.join(__dirname, 'Icon.png'),
         backgroundColor: '#1a1a2e',
         show: false,
+        fullscreenable: true, // Explicitly allow fullscreen
     });
 
     // Show when ready to avoid white flash

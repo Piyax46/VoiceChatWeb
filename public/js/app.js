@@ -743,11 +743,22 @@
             if (!video) {
                 video = document.createElement('video');
                 video.autoplay = true; video.playsInline = true;
+                video.controls = true; // Enable native controls for reliability
                 if (peerId === currentUser.socketId) video.muted = true;
-                video.style.cursor = 'pointer'; video.title = 'Click for Fullscreen';
-                video.addEventListener('click', () => {
-                    if (document.fullscreenElement) document.exitFullscreen();
-                    else video.requestFullscreen().catch(() => { });
+                video.style.cursor = 'pointer'; video.title = 'Double-click for Fullscreen';
+
+                // Toggle fullscreen on double click to avoid conflict with controls
+                video.addEventListener('dblclick', async () => {
+                    try {
+                        if (document.fullscreenElement) {
+                            await document.exitFullscreen();
+                        } else {
+                            await video.requestFullscreen();
+                        }
+                    } catch (err) {
+                        console.error('[Video] Fullscreen error:', err);
+                        showToast('⚠️', 'Fullscreen error', 'error');
+                    }
                 });
                 card.prepend(video);
             }
