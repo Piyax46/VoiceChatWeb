@@ -745,7 +745,7 @@
                 video.autoplay = true; video.playsInline = true;
                 video.controls = true; // Enable native controls for reliability
                 if (peerId === currentUser.socketId) video.muted = true;
-                video.style.cursor = 'pointer'; video.title = 'Double-click for Fullscreen';
+                video.title = 'Double-click for Fullscreen';
 
                 // Toggle fullscreen on double click to avoid conflict with controls
                 video.addEventListener('dblclick', async () => {

@@ -902,6 +902,9 @@ video {
   max-height: 200px;
   object-fit: cover;
   background: #000;
+  position: relative;
+  z-index: 10;
+  /* Ensure video is above other card elements */
 }
 
 .member-avatar {
@@ -2293,6 +2296,7 @@ video {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
 /* Hidden YouTube Player - MUST be visible to DOM for API to work */
 #youtube-player-container {
   position: fixed;
@@ -2301,9 +2305,11 @@ video {
   width: 1px;
   height: 1px;
   overflow: hidden;
-  opacity: 0.01; /* Non-zero opacity sometimes helps */
+  opacity: 0.01;
+  /* Non-zero opacity sometimes helps */
   pointer-events: none;
-  z-index: 99999; /* Ensure it's 'on top' logically even if invisible */
+  z-index: 99999;
+  /* Ensure it's 'on top' logically even if invisible */
 }
 
 #youtube-player {
@@ -2319,9 +2325,11 @@ video {
   width: 1px;
   height: 1px;
   overflow: hidden;
-  opacity: 0.01; /* Non-zero opacity sometimes helps */
+  opacity: 0.01;
+  /* Non-zero opacity sometimes helps */
   pointer-events: none;
-  z-index: 99999; /* Ensure it's 'on top' logically even if invisible */
+  z-index: 99999;
+  /* Ensure it's 'on top' logically even if invisible */
 }
 
 #youtube-player {
