@@ -5,6 +5,7 @@ const path = require('path');
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=256');
 app.commandLine.appendSwitch('disable-gpu-compositing');
 app.commandLine.appendSwitch('enable-features', 'V8VmFuture');
+app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
 
 let mainWindow;
 let screenPickerCallback = null;
@@ -21,8 +22,7 @@ function createWindow() {
             contextIsolation: true,
             preload: path.join(__dirname, 'preload.js'),
             spellcheck: false,
-            v8CacheOptions: 'code',
-            autoplayPolicy: 'no-user-gesture-required' // Allow audio to play without interaction
+            v8CacheOptions: 'code'
         },
         title: "So Mua VoiceChat",
         icon: path.join(__dirname, 'Icon.png'),
