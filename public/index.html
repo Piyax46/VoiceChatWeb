@@ -4,7 +4,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VoiceChat — Piya Voice Communication</title>
+  <title>So Mua VoiceChat — Voice Communication</title>
+  <link rel="icon" type="image/png" href="/Icon.png">
+  <link rel="apple-touch-icon" href="/Icon.png">
   <meta name="description"
     content="Real-time voice chat application with high-quality audio, rooms, and Discord-inspired UI">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -15,14 +17,14 @@
 </head>
 
 <body>
-  <!-- ─── Login Screen ─────────────────────────────────────────── -->
-  <div id="login-screen" class="login-screen">
+  <!-- ─── Auth Screen ─────────────────────────────────────────── -->
+  <div id="auth-screen" class="auth-screen">
     <div class="login-bg-orbs">
       <div class="orb orb-1"></div>
       <div class="orb orb-2"></div>
       <div class="orb orb-3"></div>
     </div>
-    <div class="login-card">
+    <div class="auth-card">
       <div class="login-logo">
         <svg class="logo-icon" viewBox="0 0 48 48" fill="none">
           <circle cx="24" cy="24" r="22" fill="url(#logoGrad)" />
@@ -42,33 +44,73 @@
           </defs>
         </svg>
       </div>
-      <h1 class="login-title">VoiceChat</h1>
+      <h1 class="login-title">So Mua VoiceChat</h1>
       <p class="login-subtitle">เชื่อมต่อเสียงคุณกับทุกคน</p>
-      <form id="login-form">
+
+      <!-- Auth Tabs -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" data-tab="login">เข้าสู่ระบบ</button>
+        <button class="auth-tab" data-tab="register">สมัครสมาชิก</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" class="auth-form">
         <div class="input-group">
-          <input type="text" id="username-input" placeholder="ใส่ชื่อของคุณ" maxlength="20" autocomplete="off" required>
+          <input type="text" id="login-username" placeholder="ชื่อผู้ใช้" maxlength="20" autocomplete="username"
+            required>
           <div class="input-highlight"></div>
         </div>
-        <button type="submit" class="btn-login" id="btn-join">
-          <span>เข้าร่วม</span>
+        <div class="input-group">
+          <input type="password" id="login-password" placeholder="รหัสผ่าน" autocomplete="current-password" required>
+          <div class="input-highlight"></div>
+        </div>
+        <label class="remember-me">
+          <input type="checkbox" id="login-remember" checked>
+          <span class="remember-checkbox"></span>
+          <span>จดจำฉัน</span>
+        </label>
+        <div id="login-error" class="auth-error hidden"></div>
+        <button type="submit" class="btn-login" id="btn-login">
+          <span>เข้าสู่ระบบ</span>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M5 12h14M12 5l7 7-7 7" />
           </svg>
         </button>
       </form>
+
+      <!-- Register Form -->
+      <form id="register-form" class="auth-form hidden">
+        <div class="input-group">
+          <input type="text" id="register-username" placeholder="ชื่อผู้ใช้ (2-20 ตัวอักษร)" maxlength="20"
+            autocomplete="username" required>
+          <div class="input-highlight"></div>
+        </div>
+        <div class="input-group">
+          <input type="password" id="register-password" placeholder="รหัสผ่าน (4+ ตัวอักษร)" autocomplete="new-password"
+            required>
+          <div class="input-highlight"></div>
+        </div>
+        <div class="input-group">
+          <input type="password" id="register-confirm" placeholder="ยืนยันรหัสผ่าน" autocomplete="new-password"
+            required>
+          <div class="input-highlight"></div>
+        </div>
+        <div id="register-error" class="auth-error hidden"></div>
+        <button type="submit" class="btn-login" id="btn-register">
+          <span>สมัครสมาชิก</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+            <circle cx="8.5" cy="7" r="4" />
+            <line x1="20" y1="8" x2="20" y2="14" />
+            <line x1="23" y1="11" x2="17" y2="11" />
+          </svg>
+        </button>
+      </form>
+
       <div class="login-features">
-        <div class="feature">
-          <span class="feature-icon">🎙️</span>
-          <span>เสียงคุณภาพสูง</span>
-        </div>
-        <div class="feature">
-          <span class="feature-icon">🔊</span>
-          <span>หลายห้อง</span>
-        </div>
-        <div class="feature">
-          <span class="feature-icon">⚡</span>
-          <span>เรียลไทม์</span>
-        </div>
+        <div class="feature"><span class="feature-icon">🎙️</span><span>เสียงคุณภาพสูง</span></div>
+        <div class="feature"><span class="feature-icon">💬</span><span>แชทข้อความ</span></div>
+        <div class="feature"><span class="feature-icon">⚡</span><span>เรียลไทม์</span></div>
       </div>
     </div>
   </div>
@@ -79,33 +121,28 @@
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="server-icon">
-          <svg viewBox="0 0 48 48" fill="none" width="32" height="32">
-            <circle cx="24" cy="24" r="22" fill="url(#sideLogoGrad)" />
-            <path d="M16 20c0-4.418 3.582-8 8-8s8 3.582 8 8v4c0 4.418-3.582 8-8 8s-8-3.582-8-8v-4z"
-              fill="rgba(255,255,255,0.25)" />
-            <circle cx="20" cy="20" r="1.5" fill="white" />
-            <circle cx="28" cy="20" r="1.5" fill="white" />
-            <defs>
-              <linearGradient id="sideLogoGrad" x1="0" y1="0" x2="48" y2="48">
-                <stop offset="0%" stop-color="#5865F2" />
-                <stop offset="100%" stop-color="#EB459E" />
-              </linearGradient>
-            </defs>
-          </svg>
+          <img src="/Icon.png" alt="So Mua VoiceChat" width="32" height="32"
+            style="border-radius: 50%; object-fit: cover;">
         </div>
         <div class="server-info">
-          <h2 class="server-name">VoiceChat</h2>
+          <h2 class="server-name">So Mua VoiceChat</h2>
           <span class="server-status" id="online-count">0 Online</span>
         </div>
       </div>
 
+      <!-- Voice Channels -->
       <div class="channel-category">
         <span class="category-label">🔊 VOICE CHANNELS</span>
+        <button class="btn-add-room" id="btn-add-voice-room" title="สร้างห้องเสียง">+</button>
       </div>
+      <div class="room-list" id="voice-room-list"></div>
 
-      <div class="room-list" id="room-list">
-        <!-- Rooms will be injected here by JS -->
+      <!-- Text Channels -->
+      <div class="channel-category">
+        <span class="category-label">💬 TEXT CHANNELS</span>
+        <button class="btn-add-room" id="btn-add-text-room" title="สร้างห้องแชท">+</button>
       </div>
+      <div class="room-list" id="text-room-list"></div>
 
       <!-- User Panel (bottom) -->
       <div class="user-panel" id="user-panel">
@@ -169,7 +206,7 @@
 
     <!-- Main Content -->
     <main class="main-content">
-      <!-- Default View (no room selected) -->
+      <!-- Default View -->
       <div class="welcome-view" id="welcome-view">
         <div class="welcome-illustration">
           <div class="pulse-ring"></div>
@@ -191,10 +228,10 @@
           </svg>
         </div>
         <h2 class="welcome-title">เลือกห้องเสียงเพื่อเริ่มพูดคุย</h2>
-        <p class="welcome-desc">คลิกที่ห้องเสียงด้านซ้ายเพื่อเข้าร่วมสนทนา</p>
+        <p class="welcome-desc">คลิกที่ห้องด้านซ้ายเพื่อเข้าร่วมสนทนา หรือส่งข้อความหาเพื่อน</p>
       </div>
 
-      <!-- Room View (when in a room) -->
+      <!-- Room View (Voice) -->
       <div class="room-view hidden" id="room-view">
         <div class="room-header">
           <div class="room-header-info">
@@ -213,9 +250,7 @@
             </div>
           </div>
         </div>
-        <div class="room-members" id="room-members">
-          <!-- Members will be injected here -->
-        </div>
+        <div class="room-members" id="room-members"></div>
         <div class="room-footer">
           <div class="voice-controls">
             <button class="voice-btn" id="btn-mute-main" title="Toggle Mute">
@@ -269,15 +304,41 @@
           </div>
         </div>
       </div>
+
+      <!-- Chat View (Text Channel / DM) -->
+      <div class="chat-view hidden" id="chat-view">
+        <div class="chat-header">
+          <div class="chat-header-info">
+            <span class="chat-header-icon" id="chat-header-icon">💬</span>
+            <h2 class="chat-header-name" id="chat-header-name">Chat</h2>
+          </div>
+        </div>
+        <div class="chat-messages" id="chat-messages"></div>
+        <div class="chat-input-bar">
+          <input type="text" id="chat-input" placeholder="พิมพ์ข้อความ..." maxlength="500" autocomplete="off">
+          <button id="btn-send-message" class="btn-send">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="22" y1="2" x2="11" y2="13" />
+              <polygon points="22 2 15 22 11 13 2 9 22 2" />
+            </svg>
+          </button>
+        </div>
+      </div>
     </main>
+
+    <!-- Right Sidebar: Online Users -->
+    <aside class="right-sidebar" id="right-sidebar">
+      <div class="right-sidebar-header">
+        <h3>สมาชิกออนไลน์</h3>
+      </div>
+      <div class="online-users-list" id="online-users-list"></div>
+    </aside>
   </div>
 
   <!-- ─── Music Panel ────────────────────────────────────────────── -->
   <div id="music-panel" class="music-panel hidden">
     <div class="music-header">
-      <h3>
-        <span class="music-icon">🎵</span> Music Player
-      </h3>
+      <h3><span class="music-icon">🎵</span> Music Player</h3>
       <button id="btn-close-music" class="btn-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -285,8 +346,6 @@
         </svg>
       </button>
     </div>
-
-    <!-- Current Song -->
     <div class="current-song hidden" id="current-song-container">
       <div class="song-artwork">
         <img id="current-song-img" src="" alt="Album Art">
@@ -306,8 +365,6 @@
         </div>
       </div>
     </div>
-
-    <!-- Search -->
     <div class="music-search">
       <input type="text" id="music-search-input" placeholder="Search YouTube...">
       <button id="btn-search-music">
@@ -317,19 +374,11 @@
         </svg>
       </button>
     </div>
-
-    <!-- Search Results -->
     <div id="search-results" class="search-results hidden"></div>
-
-    <!-- Queue -->
     <div class="music-queue">
       <h4>Queue</h4>
-      <div id="queue-list" class="queue-list">
-        <!-- Queue items -->
-      </div>
+      <div id="queue-list" class="queue-list"></div>
     </div>
-
-    <!-- Controls -->
     <div class="music-controls">
       <button id="btn-toggle-play" class="btn-control" title="Play/Pause">
         <svg id="icon-play" viewBox="0 0 24 24" fill="none" class="hidden" stroke="currentColor" stroke-width="2">
@@ -340,20 +389,17 @@
           <line x1="14" y1="4" x2="14" y2="20"></line>
         </svg>
       </button>
-
       <button id="btn-skip-music" class="btn-control" title="Skip">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polygon points="5 4 15 12 5 20 5 4"></polygon>
           <line x1="19" y1="5" x2="19" y2="19"></line>
         </svg>
       </button>
-
       <button id="btn-stop-music" class="btn-control stop" title="Stop">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <rect x="6" y="6" width="12" height="12"></rect>
         </svg>
       </button>
-
       <div class="volume-control">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
@@ -364,9 +410,7 @@
   </div>
 
   <!-- Music Floating Button -->
-  <button id="btn-toggle-music" class="btn-floating-music hidden">
-    🎵
-  </button>
+  <button id="btn-toggle-music" class="btn-floating-music hidden">🎵</button>
 
   <!-- VoiceMod Modal -->
   <div id="voicemod-modal" class="modal-overlay hidden">
@@ -381,45 +425,51 @@
         </button>
       </div>
       <div class="voicemod-grid">
-        <button class="effect-btn active" data-effect="normal">
-          <span class="effect-icon">👤</span>
-          <span class="effect-name">Normal</span>
-        </button>
-        <button class="effect-btn" data-effect="robot">
-          <span class="effect-icon">🤖</span>
-          <span class="effect-name">Robot</span>
-        </button>
-        <button class="effect-btn" data-effect="female">
-          <span class="effect-icon">👩</span>
-          <span class="effect-name">Woman</span>
-        </button>
-        <button class="effect-btn" data-effect="alien">
-          <span class="effect-icon">👽</span>
-          <span class="effect-name">Alien</span>
-        </button>
-        <button class="effect-btn" data-effect="chipmunk">
-          <span class="effect-icon">🐿️</span>
-          <span class="effect-name">High Pitch</span>
-        </button>
-        <button class="effect-btn" data-effect="monster">
-          <span class="effect-icon">👹</span>
-          <span class="effect-name">Low Pitch</span>
-        </button>
-        <button class="effect-btn" data-effect="echo">
-          <span class="effect-icon">🏞️</span>
-          <span class="effect-name">Echo</span>
-        </button>
-        <button class="effect-btn" data-effect="radio">
-          <span class="effect-icon">📻</span>
-          <span class="effect-name">Radio</span>
-        </button>
-        <button class="effect-btn" data-effect="telephone">
-          <span class="effect-icon">☎️</span>
-          <span class="effect-name">Phone</span>
-        </button>
+        <button class="effect-btn active" data-effect="normal"><span class="effect-icon">👤</span><span
+            class="effect-name">Normal</span></button>
+        <button class="effect-btn" data-effect="robot"><span class="effect-icon">🤖</span><span
+            class="effect-name">Robot</span></button>
+        <button class="effect-btn" data-effect="female"><span class="effect-icon">👩</span><span
+            class="effect-name">Woman</span></button>
+        <button class="effect-btn" data-effect="alien"><span class="effect-icon">👽</span><span
+            class="effect-name">Alien</span></button>
+        <button class="effect-btn" data-effect="chipmunk"><span class="effect-icon">🐿️</span><span
+            class="effect-name">High Pitch</span></button>
+        <button class="effect-btn" data-effect="monster"><span class="effect-icon">👹</span><span
+            class="effect-name">Low Pitch</span></button>
+        <button class="effect-btn" data-effect="echo"><span class="effect-icon">🏞️</span><span
+            class="effect-name">Echo</span></button>
+        <button class="effect-btn" data-effect="radio"><span class="effect-icon">📻</span><span
+            class="effect-name">Radio</span></button>
+        <button class="effect-btn" data-effect="telephone"><span class="effect-icon">☎️</span><span
+            class="effect-name">Phone</span></button>
       </div>
-      <div class="voicemod-status">
-        Current Effect: <span id="current-effect-name">Normal</span>
+      <div class="voicemod-status">Current Effect: <span id="current-effect-name">Normal</span></div>
+    </div>
+  </div>
+
+  <!-- Create Room Modal -->
+  <div id="create-room-modal" class="modal-overlay hidden">
+    <div class="modal-card create-room-card">
+      <h3 class="modal-title">🏠 สร้างห้องใหม่</h3>
+      <div class="modal-field">
+        <label>ชื่อห้อง</label>
+        <input type="text" id="new-room-name" placeholder="ชื่อห้องของคุณ" maxlength="30">
+      </div>
+      <div class="modal-field">
+        <label>ประเภท</label>
+        <div class="room-type-selector">
+          <button class="room-type-btn active" data-type="voice">🔊 เสียง</button>
+          <button class="room-type-btn" data-type="text">💬 แชท</button>
+        </div>
+      </div>
+      <div class="modal-field">
+        <label>จำนวนคนสูงสุด</label>
+        <input type="number" id="new-room-max" value="10" min="2" max="50">
+      </div>
+      <div class="modal-actions">
+        <button class="btn-modal btn-modal-cancel" id="btn-cancel-room">ยกเลิก</button>
+        <button class="btn-modal btn-modal-save" id="btn-create-room">สร้างห้อง</button>
       </div>
     </div>
   </div>
@@ -433,13 +483,12 @@
   <div id="toast-container" class="toast-container"></div>
 
   <script src="/socket.io/socket.io.js"></script>
+
   <!-- Alert Modal -->
   <div id="alert-modal" class="modal-overlay hidden rule-z-index-9999">
     <div class="modal-card alert-card">
       <div class="alert-icon-wrapper">
-        <svg id="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <!-- Icon injected by JS -->
-        </svg>
+        <svg id="alert-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"></svg>
       </div>
       <h3 id="alert-title" class="alert-title">Title</h3>
       <p id="alert-message" class="alert-message">Message goes here...</p>

@@ -52,7 +52,6 @@ class VoiceEngine {
     async init() {
         try {
             this.localStream = await navigator.mediaDevices.getUserMedia(this.audioConstraints);
-            this.localStream = await navigator.mediaDevices.getUserMedia(this.audioConstraints);
 
             // Initialize Audio Processing
             await this.initAudioProcessing();
@@ -629,25 +628,50 @@ class VoiceEngine {
     async startScreenShare(socket) {
         try {
             this.localScreenStream = await navigator.mediaDevices.getDisplayMedia({
-                video: true,
-                audio: false
+                video: {
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                    frameRate: { ideal: 60 }
+                },
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    sampleRate: 48000
+                }
             });
 
             const videoTrack = this.localScreenStream.getVideoTracks()[0];
 
+            // Set content hint for better quality
+            if (videoTrack.contentHint !== undefined) {
+                videoTrack.contentHint = 'detail';
+            }
+
             // Handle user stopping share via browser UI
             videoTrack.onended = () => {
                 this.stopScreenShare(socket);
-                // Dispatch custom event or callback if needed to update UI button state
                 window.dispatchEvent(new CustomEvent('screenshare:ended'));
             };
 
-            // Add track to all existing peers
+            // Add track to all existing peers with high bitrate
             this.peers.forEach((peerData, peerId) => {
                 if (peerData.pc) {
                     try {
                         const sender = peerData.pc.addTrack(videoTrack, this.localScreenStream);
                         peerData.screenSender = sender;
+
+                        // Set max bitrate for HD quality
+                        try {
+                            const params = sender.getParameters();
+                            if (!params.encodings || params.encodings.length === 0) {
+                                params.encodings = [{}];
+                            }
+                            params.encodings[0].maxBitrate = 8_000_000; // 8 Mbps for 1080p60
+                            params.encodings[0].maxFramerate = 60;
+                            params.degradationPreference = 'maintain-resolution';
+                            sender.setParameters(params).catch(e => console.warn('[Voice] setParameters:', e));
+                        } catch (e) { /* browser may not support */ }
+
                         this.createOffer(peerId, socket);
                     } catch (e) {
                         console.error(`[Voice] Failed to add screen track to ${peerId}`, e);
@@ -707,9 +731,19 @@ class VoiceEngine {
 
         // Add local screen if sharing
         if (this.localScreenStream) {
+            console.log(`[Voice] Adding screen track to new peer ${peerId}`);
             this.localScreenStream.getTracks().forEach(track => {
                 // We'll capture sender later if needed, but for initial sync it's fine
-                pc.addTrack(track, this.localScreenStream);
+                try {
+                    const sender = pc.addTrack(track, this.localScreenStream);
+                    if (track.kind === 'video') {
+                        // Store the sender so we can remove it later
+                        const peerData = this.peers.get(peerId);
+                        if (peerData) peerData.screenSender = sender;
+                    }
+                } catch (e) {
+                    console.warn(`[Voice] Track already added or error:`, e);
+                }
             });
         }
 
@@ -792,11 +826,11 @@ class VoiceEngine {
         return pc;
     }
 
-    // Enhance SDP
+    // Enhance SDP for maximum audio quality
     enhanceAudioSDP(sdp) {
         return sdp.replace(
             /a=fmtp:111 /g,
-            'a=fmtp:111 maxaveragebitrate=128000;stereo=0;sprop-stereo=0;useinbandfec=1;usedtx=0;'
+            'a=fmtp:111 maxaveragebitrate=510000;stereo=1;sprop-stereo=1;useinbandfec=1;usedtx=0;cbr=0;maxplaybackrate=48000;'
         );
     }
 

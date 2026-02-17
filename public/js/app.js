@@ -5,21 +5,41 @@
     'use strict';
 
     // ─── DOM Elements ───────────────────────────────────────────
-    const loginScreen = document.getElementById('login-screen');
-    const loginForm = document.getElementById('login-form');
-    const usernameInput = document.getElementById('username-input');
+    const authScreen = document.getElementById('auth-screen');
     const appEl = document.getElementById('app');
-    const roomListEl = document.getElementById('room-list');
+    const loginForm = document.getElementById('login-form');
+    const registerForm = document.getElementById('register-form');
+    const loginError = document.getElementById('login-error');
+    const registerError = document.getElementById('register-error');
+    const authTabs = document.querySelectorAll('.auth-tab');
+
+    const voiceRoomListEl = document.getElementById('voice-room-list');
+    const textRoomListEl = document.getElementById('text-room-list');
+    const roomMembersEl = document.getElementById('room-members');
+    const welcomeView = document.getElementById('welcome-view');
+    const roomView = document.getElementById('room-view');
+    const chatView = document.getElementById('chat-view');
+    const currentRoomName = document.getElementById('current-room-name');
     const onlineCountEl = document.getElementById('online-count');
     const myAvatar = document.getElementById('my-avatar');
     const myAvatarLetter = document.getElementById('my-avatar-letter');
     const myUsername = document.getElementById('my-username');
     const myStatus = document.getElementById('my-status');
-    const welcomeView = document.getElementById('welcome-view');
-    const roomView = document.getElementById('room-view');
-    const currentRoomName = document.getElementById('current-room-name');
 
-    // Music Elements (Moved to top for scope visibility)
+    const btnMute = document.getElementById('btn-mute');
+    const btnDeafen = document.getElementById('btn-deafen');
+    const btnVoicemod = document.getElementById('btn-voicemod');
+    const btnDisconnect = document.getElementById('btn-disconnect');
+    const btnMuteMain = document.getElementById('btn-mute-main');
+    const btnDeafenMain = document.getElementById('btn-deafen-main');
+    const btnShare = document.getElementById('btn-share');
+    const btnLeave = document.getElementById('btn-leave');
+
+    const voicemodModal = document.getElementById('voicemod-modal');
+    const btnCloseVoicemod = document.getElementById('btn-close-voicemod');
+    const effectBtns = document.querySelectorAll('.effect-btn');
+    const currentEffectNameEl = document.getElementById('current-effect-name');
+
     const musicPanel = document.getElementById('music-panel');
     const btnToggleMusic = document.getElementById('btn-toggle-music');
     const btnCloseMusic = document.getElementById('btn-close-music');
@@ -32,102 +52,66 @@
     const currentSongTitle = document.getElementById('current-song-title');
     const currentSongAddedBy = document.getElementById('current-song-added-by');
     const songProgressBar = document.getElementById('song-progress-bar');
+    const btnTogglePlay = document.getElementById('btn-toggle-play');
     const btnSkipMusic = document.getElementById('btn-skip-music');
     const btnStopMusic = document.getElementById('btn-stop-music');
-    const btnTogglePlay = document.getElementById('btn-toggle-play');
-    const iconPlay = document.getElementById('icon-play');
-    const iconPause = document.getElementById('icon-pause');
     const volumeSlider = document.getElementById('music-volume');
+    const toastContainer = document.getElementById('toast-container');
 
-    // Alert Modal Elements
     const alertModal = document.getElementById('alert-modal');
     const alertTitle = document.getElementById('alert-title');
     const alertMessage = document.getElementById('alert-message');
     const alertIcon = document.getElementById('alert-icon');
     const btnAlertOk = document.getElementById('btn-alert-ok');
     const btnAlertCancel = document.getElementById('btn-alert-cancel');
-    const alertCard = document.querySelector('.alert-card');
 
-    // ... (rest of variable declarations)
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const btnSendMessage = document.getElementById('btn-send-message');
+    const chatHeaderName = document.getElementById('chat-header-name');
+    const chatHeaderIcon = document.getElementById('chat-header-icon');
+    const onlineUsersList = document.getElementById('online-users-list');
+
+    const createRoomModal = document.getElementById('create-room-modal');
+    const btnAddVoiceRoom = document.getElementById('btn-add-voice-room');
+    const btnAddTextRoom = document.getElementById('btn-add-text-room');
+    const btnCancelRoom = document.getElementById('btn-cancel-room');
+    const btnCreateRoom = document.getElementById('btn-create-room');
+    const roomTypeBtns = document.querySelectorAll('.room-type-btn');
 
     // ─── Custom Alert System ────────────────────────────────────
-    window.showAlert = function (title, message, type = 'info', onOk = null, onCancel = null) {
+    function showAlert(title, message, type = 'info', onOk = null, onCancel = null) {
         alertTitle.textContent = title;
         alertMessage.textContent = message;
-
-        // Reset classes
-        alertCard.classList.remove('error', 'success');
-        if (type === 'error') alertCard.classList.add('error');
-        if (type === 'success') alertCard.classList.add('success');
-
-        // Set Icon
-        let iconHtml = '';
-        if (type === 'error') {
-            iconHtml = '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line>';
-        } else if (type === 'success') {
-            iconHtml = '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline>';
-        } else {
-            iconHtml = '<circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line>';
+        let iconPath = '';
+        switch (type) {
+            case 'success': iconPath = '<circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/>'; break;
+            case 'error': iconPath = '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>'; break;
+            case 'warning': iconPath = '<path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>'; break;
+            default: iconPath = '<circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>'; break;
         }
-        alertIcon.innerHTML = iconHtml;
-
-        // Buttons
-        if (onCancel) {
-            btnAlertCancel.classList.remove('hidden');
-            btnAlertCancel.onclick = () => {
-                closeAlert();
-                onCancel();
-            };
-        } else {
-            btnAlertCancel.classList.add('hidden');
-        }
-
-        btnAlertOk.onclick = () => {
-            closeAlert();
-            if (onOk) onOk();
-        };
-
+        alertIcon.innerHTML = iconPath;
+        if (onCancel) { btnAlertCancel.classList.remove('hidden'); } else { btnAlertCancel.classList.add('hidden'); }
         alertModal.classList.remove('hidden');
-    };
-
-    function closeAlert() {
-        alertModal.classList.add('hidden');
+        btnAlertOk.onclick = () => { closeAlert(); if (onOk) onOk(); };
+        if (onCancel) btnAlertCancel.onclick = () => { closeAlert(); onCancel(); };
     }
 
-    // Custom Alert System is defined above.
-    // Socket listeners will be attached in joinApp() where socket is initialized.
-
-    const roomMembersEl = document.getElementById('room-members');
-    const toastContainer = document.getElementById('toast-container');
-
-    // Buttons
-    const btnMute = document.getElementById('btn-mute');
-    const btnDeafen = document.getElementById('btn-deafen');
-    const btnDisconnect = document.getElementById('btn-disconnect');
-    const btnMuteMain = document.getElementById('btn-mute-main');
-    const btnDeafenMain = document.getElementById('btn-deafen-main');
-    const btnLeave = document.getElementById('btn-leave');
-    const btnShare = document.getElementById('btn-share');
-    const btnVoicemod = document.getElementById('btn-voicemod');
-    const voicemodModal = document.getElementById('voicemod-modal');
-    const btnCloseVoicemod = document.getElementById('btn-close-voicemod');
-    const effectBtns = document.querySelectorAll('.effect-btn');
-    const currentEffectNameEl = document.getElementById('current-effect-name');
+    function closeAlert() { alertModal.classList.add('hidden'); }
 
     // ─── State ──────────────────────────────────────────────────
     let socket = null;
     let voice = null;
     let currentUser = null;
     let currentRoomId = null;
+    let currentChatTarget = null; // { type: 'dm', userId, username } or { type: 'room', roomId, roomName }
     let roomsState = {};
-    let userAvatarImage = null; // Base64 avatar image
+    let onlineUsers = [];
     let isSharingScreen = false;
 
-    // Music Player State (Restored)
     let player = null;
     let isMusicPanelOpen = false;
     let musicState = { queue: [], current: null, isPlaying: false, startTime: 0 };
-    let progressInterval = null;
 
     const AVATAR_COLORS = [
         '#5865F2', '#57F287', '#FEE75C', '#EB459E', '#ED4245',
@@ -135,154 +119,214 @@
         '#00BCD4', '#FF9800', '#8BC34A', '#673AB7', '#2196F3'
     ];
 
-    // ─── Login ──────────────────────────────────────────────────
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const username = usernameInput.value.trim();
-        if (!username) return;
-        joinApp(username);
+    // ─── Auth Tabs ──────────────────────────────────────────────
+    authTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            authTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            if (tab.dataset.tab === 'login') {
+                loginForm.classList.remove('hidden');
+                registerForm.classList.add('hidden');
+            } else {
+                loginForm.classList.add('hidden');
+                registerForm.classList.remove('hidden');
+            }
+        });
     });
 
-    async function joinApp(username) {
-        // Connect to socket
-        socket = io();
+    // ─── Auto Login Check ───────────────────────────────────────
+    (async function checkAuth() {
+        try {
+            const res = await fetch('/api/me');
+            if (res.ok) {
+                const data = await res.json();
+                currentUser = data.user;
+                startApp();
+            }
+        } catch (e) { /* Not logged in */ }
+    })();
+
+    // ─── Login ──────────────────────────────────────────────────
+    loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        loginError.classList.add('hidden');
+        const username = document.getElementById('login-username').value.trim();
+        const password = document.getElementById('login-password').value;
+        const rememberMe = document.getElementById('login-remember').checked;
+        if (!username || !password) return;
+        try {
+            const res = await fetch('/api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, rememberMe })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                loginError.textContent = data.error;
+                loginError.classList.remove('hidden');
+                return;
+            }
+            currentUser = data.user;
+            startApp();
+        } catch (err) {
+            loginError.textContent = 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+            loginError.classList.remove('hidden');
+        }
+    });
+
+    // ─── Register ───────────────────────────────────────────────
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        registerError.classList.add('hidden');
+        const username = document.getElementById('register-username').value.trim();
+        const password = document.getElementById('register-password').value;
+        const confirm = document.getElementById('register-confirm').value;
+        if (!username || !password) return;
+        if (password !== confirm) {
+            registerError.textContent = 'รหัสผ่านไม่ตรงกัน';
+            registerError.classList.remove('hidden');
+            return;
+        }
+        try {
+            const res = await fetch('/api/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                registerError.textContent = data.error;
+                registerError.classList.remove('hidden');
+                return;
+            }
+            currentUser = data.user;
+            startApp();
+        } catch (err) {
+            registerError.textContent = 'เกิดข้อผิดพลาด กรุณาลองใหม่';
+            registerError.classList.remove('hidden');
+        }
+    });
+
+    // ─── Start App (after auth) ─────────────────────────────────
+    function startApp() {
+        authScreen.classList.add('hidden');
+        appEl.classList.remove('hidden');
+        updateUserPanel();
+        connectSocket();
+    }
+
+    function connectSocket() {
+        socket = io({ transports: ['websocket', 'polling'] });
 
         socket.on('connect', () => {
-            socket.emit('user:join', { username });
+            socket.emit('user:join', {
+                userId: currentUser.id,
+                username: currentUser.username,
+                avatarColor: currentUser.avatarColor,
+                avatarData: currentUser.avatarData
+            });
             if (window.setupMusicListeners) window.setupMusicListeners(socket);
         });
 
         socket.on('user:info', (user) => {
-            currentUser = user;
-            updateUserPanel();
-            loginScreen.classList.add('hidden');
-            appEl.classList.remove('hidden');
-            showToast('🎙️', `ยินดีต้อนรับ ${user.username}!`, 'success');
+            currentUser.socketId = user.id;
         });
 
-        // Room updates
         socket.on('rooms:update', (state) => {
             roomsState = state;
             renderRoomList();
-            if (currentRoomId) {
-                renderRoomMembers();
-            }
+            if (currentRoomId) renderRoomMembers();
         });
 
-        // Online users
-        socket.on('users:online', (users) => {
-            onlineCountEl.textContent = `${users.length} Online`;
+        socket.on('users:online', (list) => {
+            onlineUsers = list;
+            if (onlineCountEl) onlineCountEl.textContent = `${list.length} Online`;
+            renderOnlineUsers();
         });
 
-        // Room joined
         socket.on('room:joined', async ({ roomId, peers }) => {
             currentRoomId = roomId;
-
-            // Initialize voice engine
-            voice = new VoiceEngine();
-            const success = await voice.init();
-            if (!success) {
-                showToast('❌', 'ไม่สามารถเข้าถึงไมโครโฟนได้', 'error');
-                socket.emit('room:leave');
-                currentRoomId = null;
-                return;
-            }
-
-            // Set speaking detection
-            voice.onSpeaking((speaking) => {
-                socket.emit('user:speaking', { speaking });
-                updateMemberSpeaking(currentUser.id, speaking);
-            });
-
-            // Set video/screen share handling
-            voice.onVideo((peerId, stream, isAdding) => {
-                updateMemberVideo(peerId, stream, isAdding);
-            });
-
-            // Enable controls
+            showRoomView(roomId);
             btnMute.disabled = false;
             btnDeafen.disabled = false;
             btnVoicemod.disabled = false;
             btnShare.disabled = false;
             btnDisconnect.classList.remove('hidden');
 
-            // Connect to existing peers
+            voice = new VoiceEngine();
+            const ok = await voice.init();
+            if (!ok) {
+                showAlert('ข้อผิดพลาด', 'ไม่สามารถเข้าถึงไมโครโฟนได้', 'error');
+                return;
+            }
+            voice.onSpeaking((speaking) => {
+                socket.emit('user:speaking', { speaking });
+                updateMemberSpeaking(currentUser.socketId, speaking);
+            });
+            voice.onVideo((peerId, stream, isAdding) => {
+                updateMemberVideo(peerId, stream, isAdding);
+            });
+
             peers.forEach(peer => {
                 voice.createPeerConnection(peer.id, socket, true);
             });
 
-            // Show room view
-            showRoomView(roomId);
-            showToast('🔊', `เข้าร่วมห้อง ${roomsState[roomId]?.name || roomId}`, 'success');
+            showToast('🔊', 'เข้าร่วมห้องเสียงแล้ว', 'success');
         });
 
-        // Room full
-        socket.on('room:full', () => {
-            showToast('⚠️', 'ห้องเต็มแล้ว', 'error');
+        socket.on('room:full', () => showToast('⚠️', 'ห้องเต็มแล้ว', 'error'));
+        socket.on('room:kicked', ({ reason }) => {
+            leaveRoom();
+            showToast('⚠️', reason, 'warning');
         });
 
-        // New peer joined
         socket.on('peer:joined', ({ peerId, username }) => {
-            if (voice) {
-                voice.createPeerConnection(peerId, socket, false);
-            }
+            if (voice) voice.createPeerConnection(peerId, socket, false);
             showToast('👋', `${username} เข้าร่วมห้อง`, 'info');
         });
 
-        // Peer left
         socket.on('peer:left', ({ peerId }) => {
-            if (voice) {
-                voice.removePeer(peerId);
+            if (voice) voice.removePeer(peerId);
+            updateMemberVideo(peerId, null, false);
+        });
+
+        socket.on('webrtc:offer', ({ from, offer }) => { if (voice) voice.handleOffer(from, offer, socket); });
+        socket.on('webrtc:answer', ({ from, answer }) => { if (voice) voice.handleAnswer(from, answer); });
+        socket.on('webrtc:ice-candidate', ({ from, candidate }) => { if (voice) voice.handleIceCandidate(from, candidate); });
+        socket.on('peer:speaking', ({ peerId, speaking }) => updateMemberSpeaking(peerId, speaking));
+        socket.on('peer:mute', ({ peerId, muted }) => updateMemberMute(peerId, muted));
+        socket.on('peer:deafen', () => { renderRoomMembers(); renderRoomList(); });
+
+        socket.on('user:profile-changed', ({ socketId, username, avatarColor, avatarData }) => {
+            renderRoomList();
+            if (currentRoomId) renderRoomMembers();
+            renderOnlineUsers();
+        });
+
+        // Messaging
+        socket.on('message:receive', (msg) => {
+            if (currentChatTarget) {
+                if (currentChatTarget.type === 'dm' &&
+                    (msg.sender_id === currentChatTarget.userId || msg.receiver_id === currentChatTarget.userId)) {
+                    appendMessage(msg);
+                } else if (currentChatTarget.type === 'room' && msg.room_id === currentChatTarget.roomId) {
+                    appendMessage(msg);
+                }
+            }
+            // Show notification if not viewing this chat
+            if (!currentChatTarget ||
+                (currentChatTarget.type === 'dm' && msg.sender_id !== currentChatTarget.userId && msg.sender_id !== currentUser.id)) {
+                showToast('💬', `${msg.sender_username}: ${msg.content.slice(0, 30)}`, 'info');
             }
         });
 
-        // WebRTC signaling
-        socket.on('webrtc:offer', async ({ from, offer }) => {
-            if (voice) {
-                await voice.handleOffer(from, offer, socket);
-            }
-        });
-
-        socket.on('webrtc:answer', async ({ from, answer }) => {
-            if (voice) {
-                await voice.handleAnswer(from, answer);
-            }
-        });
-
-        socket.on('webrtc:ice-candidate', async ({ from, candidate }) => {
-            if (voice) {
-                await voice.handleIceCandidate(from, candidate);
-            }
-        });
-
-        // Peer status updates
-        socket.on('peer:mute', ({ peerId, muted }) => {
-            updateMemberMute(peerId, muted);
-        });
-
-        socket.on('peer:deafen', ({ peerId, deafened }) => {
-            updateMemberDeafen(peerId, deafened);
-        });
-
-        socket.on('peer:speaking', ({ peerId, speaking }) => {
-            updateMemberSpeaking(peerId, speaking);
-        });
-
-        // Disconnect handling
         socket.on('disconnect', () => {
-            showAlert('Connection Lost', 'You have been disconnected from the server. Trying to reconnect...', 'error');
+            showAlert('ขาดการเชื่อมต่อ', 'กำลังเชื่อมต่อใหม่...', 'warning');
         });
-
-        socket.on('connect_error', () => {
-            console.log("Connection Error");
-        });
-
         socket.on('reconnect', () => {
-            showToast('✅', 'Connected', 'success');
-            socket.emit('user:join', { username: currentUser.username });
-            // Close alert if open
-            const alertModal = document.getElementById('alert-modal');
-            if (alertModal) alertModal.classList.add('hidden');
+            showToast('✅', 'เชื่อมต่อแล้ว', 'success');
+            socket.emit('user:join', { userId: currentUser.id, username: currentUser.username, avatarColor: currentUser.avatarColor, avatarData: currentUser.avatarData });
+            closeAlert();
         });
     }
 
@@ -291,108 +335,71 @@
         if (!currentUser) return;
         myUsername.textContent = currentUser.username;
         myAvatarLetter.textContent = currentUser.username.charAt(0).toUpperCase();
-        myAvatar.style.background = currentUser.avatarColor;
+        myAvatar.style.background = currentUser.avatarColor || '#5865F2';
         myStatus.textContent = currentRoomId ? 'Voice Connected' : 'Online';
-
-        if (userAvatarImage) {
-            if (!myAvatar.querySelector('img')) {
-                const img = document.createElement('img');
-                img.src = userAvatarImage;
-                myAvatar.appendChild(img);
-            } else {
-                myAvatar.querySelector('img').src = userAvatarImage;
-            }
+        if (currentUser.avatarData) {
+            let img = myAvatar.querySelector('img');
+            if (!img) { img = document.createElement('img'); myAvatar.appendChild(img); }
+            img.src = currentUser.avatarData;
             myAvatarLetter.style.display = 'none';
         } else {
-            const existingImg = myAvatar.querySelector('img');
-            if (existingImg) existingImg.remove();
+            const img = myAvatar.querySelector('img');
+            if (img) img.remove();
             myAvatarLetter.style.display = '';
         }
     }
 
-    // Click user info to open profile editor
-    document.querySelector('.user-info').addEventListener('click', () => {
-        openProfileModal();
-    });
+    document.querySelector('.user-info').addEventListener('click', openProfileModal);
 
     // ─── Profile Modal ─────────────────────────────────────────
     function openProfileModal() {
-        // Remove existing modal
-        const existing = document.querySelector('.modal-overlay');
+        const existing = document.getElementById('profile-modal-overlay');
         if (existing) existing.remove();
 
         const overlay = document.createElement('div');
         overlay.className = 'modal-overlay';
+        overlay.id = 'profile-modal-overlay';
         overlay.innerHTML = `
       <div class="modal-card">
         <h3 class="modal-title">👤 แก้ไขโปรไฟล์</h3>
-        
         <div class="modal-avatar-section">
-          <div class="modal-avatar-preview" id="modal-avatar-preview" style="background: ${currentUser.avatarColor}">
-            ${userAvatarImage ? `<img src="${userAvatarImage}" />` : `<span>${currentUser.username.charAt(0).toUpperCase()}</span>`}
+          <div class="modal-avatar-preview" id="modal-avatar-preview" style="background: ${currentUser.avatarColor || '#5865F2'}">
+            ${currentUser.avatarData ? `<img src="${currentUser.avatarData}" />` : `<span>${currentUser.username.charAt(0).toUpperCase()}</span>`}
             <div class="avatar-edit-overlay">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-                <circle cx="12" cy="13" r="4"/>
-              </svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
             </div>
           </div>
           <input type="file" accept="image/*" class="avatar-file-input" id="avatar-file-input">
           <span class="color-picker-label">เลือกสีอวาตาร์ (ถ้าไม่ใช้รูป)</span>
           <div class="color-picker-grid" id="color-picker-grid">
-            ${AVATAR_COLORS.map(c => `
-              <div class="color-swatch ${c === currentUser.avatarColor ? 'selected' : ''}" 
-                   data-color="${c}" 
-                   style="background: ${c}"></div>
-            `).join('')}
+            ${AVATAR_COLORS.map(c => `<div class="color-swatch ${c === currentUser.avatarColor ? 'selected' : ''}" data-color="${c}" style="background: ${c}"></div>`).join('')}
           </div>
         </div>
-        
         <div class="modal-field">
           <label>ชื่อผู้ใช้</label>
           <input type="text" id="modal-username" value="${currentUser.username}" maxlength="20" autocomplete="off">
         </div>
-        
         <div class="modal-actions">
           <button class="btn-modal btn-modal-cancel" id="btn-modal-cancel">ยกเลิก</button>
           <button class="btn-modal btn-modal-save" id="btn-modal-save">บันทึก</button>
         </div>
-      </div>
-    `;
-
+      </div>`;
         document.body.appendChild(overlay);
 
-        // Avatar image upload
         const avatarPreview = overlay.querySelector('#modal-avatar-preview');
         const fileInput = overlay.querySelector('#avatar-file-input');
-
         avatarPreview.addEventListener('click', () => fileInput.click());
 
         fileInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            if (file.size > 2 * 1024 * 1024) {
-                showToast('⚠️', 'รูปภาพต้องมีขนาดไม่เกิน 2MB', 'error');
-                return;
-            }
-            const reader = new FileReader();
-            reader.onload = (ev) => {
-                const imgData = ev.target.result;
-                avatarPreview.innerHTML = `
-          <img src="${imgData}" />
-          <div class="avatar-edit-overlay">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
-              <circle cx="12" cy="13" r="4"/>
-            </svg>
-          </div>
-        `;
-                avatarPreview._pendingImage = imgData;
-            };
-            reader.readAsDataURL(file);
+            if (file.size > 2 * 1024 * 1024) { showToast('⚠️', 'รูปต้องไม่เกิน 2MB', 'error'); return; }
+            resizeImage(file, 128, (dataUrl) => {
+                avatarPreview.innerHTML = `<img src="${dataUrl}" /><div class="avatar-edit-overlay"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg></div>`;
+                avatarPreview._pendingImage = dataUrl;
+            });
         });
 
-        // Color swatches
         const swatches = overlay.querySelectorAll('.color-swatch');
         swatches.forEach(sw => {
             sw.addEventListener('click', () => {
@@ -402,127 +409,138 @@
             });
         });
 
-        // Cancel
         overlay.querySelector('#btn-modal-cancel').addEventListener('click', () => overlay.remove());
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
 
-        // Click outside to close
-        overlay.addEventListener('click', (e) => {
-            if (e.target === overlay) overlay.remove();
-        });
-
-        // Save
-        overlay.querySelector('#btn-modal-save').addEventListener('click', () => {
+        overlay.querySelector('#btn-modal-save').addEventListener('click', async () => {
             const newUsername = overlay.querySelector('#modal-username').value.trim();
             const selectedColor = overlay.querySelector('.color-swatch.selected')?.dataset.color || currentUser.avatarColor;
+            const avatarData = avatarPreview._pendingImage !== undefined ? avatarPreview._pendingImage : currentUser.avatarData;
 
-            if (newUsername && newUsername !== currentUser.username) {
-                currentUser.username = newUsername;
-                // Re-emit user join with new name
-                socket.emit('user:join', { username: newUsername });
-            }
-
-            currentUser.avatarColor = selectedColor;
-
-            if (avatarPreview._pendingImage) {
-                userAvatarImage = avatarPreview._pendingImage;
-            }
-
-            updateUserPanel();
-            renderRoomList();
-            if (currentRoomId) renderRoomMembers();
-            overlay.remove();
-            showToast('✅', 'อัปเดตโปรไฟล์แล้ว', 'success');
+            try {
+                const res = await fetch('/api/profile', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: newUsername, avatarColor: selectedColor, avatarData })
+                });
+                const data = await res.json();
+                if (!res.ok) { showToast('⚠️', data.error, 'error'); return; }
+                currentUser = data.user;
+                updateUserPanel();
+                socket.emit('user:profile-update', { username: currentUser.username, avatarColor: currentUser.avatarColor, avatarData: currentUser.avatarData });
+                renderRoomList();
+                if (currentRoomId) renderRoomMembers();
+                overlay.remove();
+                showToast('✅', 'อัปเดตโปรไฟล์แล้ว', 'success');
+            } catch (err) { showToast('⚠️', 'เกิดข้อผิดพลาด', 'error'); }
         });
+    }
+
+    // Resize image to fixed size before storing
+    function resizeImage(file, maxSize, callback) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = maxSize;
+                canvas.height = maxSize;
+                const ctx = canvas.getContext('2d');
+                const size = Math.min(img.width, img.height);
+                const sx = (img.width - size) / 2;
+                const sy = (img.height - size) / 2;
+                ctx.drawImage(img, sx, sy, size, size, 0, 0, maxSize, maxSize);
+                callback(canvas.toDataURL('image/webp', 0.8));
+            };
+            img.src = ev.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // Helper: render avatar HTML
+    function avatarHTML(user, size) {
+        const bg = user.avatarColor || '#5865F2';
+        if (user.avatarData) {
+            return `<div class="avatar-circle" style="background:${bg};width:${size}px;height:${size}px"><img src="${user.avatarData}"/></div>`;
+        }
+        return `<div class="avatar-circle" style="background:${bg};width:${size}px;height:${size}px"><span>${(user.username || 'U').charAt(0).toUpperCase()}</span></div>`;
     }
 
     // ─── Room List Rendering ────────────────────────────────────
     function renderRoomList() {
-        roomListEl.innerHTML = '';
+        if (!voiceRoomListEl || !textRoomListEl) return;
+        voiceRoomListEl.innerHTML = '';
+        textRoomListEl.innerHTML = '';
 
         Object.values(roomsState).forEach(room => {
+            const isVoice = (room.type || 'voice') === 'voice';
+            const targetEl = isVoice ? voiceRoomListEl : textRoomListEl;
             const item = document.createElement('div');
             item.className = `room-item ${currentRoomId === room.id ? 'active' : ''}`;
+            if (currentChatTarget && currentChatTarget.type === 'room' && currentChatTarget.roomId === room.id) {
+                item.classList.add('active');
+            }
 
-            const usersHtml = room.users.map(u => {
-                const isSelf = u.id === currentUser?.id;
-                const avatarContent = isSelf && userAvatarImage
-                    ? `<img src="${userAvatarImage}" />`
-                    : u.username.charAt(0).toUpperCase();
-
+            const usersHtml = (room.users || []).map(u => {
+                const isSelf = u.id === currentUser?.socketId;
+                const avatarSrc = (isSelf && currentUser.avatarData) ? currentUser.avatarData : u.avatarData;
+                const avatarContent = avatarSrc ? `<img src="${avatarSrc}" />` : (u.username || 'U').charAt(0).toUpperCase();
+                const color = isSelf ? (currentUser.avatarColor || '#5865F2') : (u.avatarColor || '#5865F2');
                 let iconsHtml = '';
-                if (u.deafened) {
-                    iconsHtml = `<span class="deafened"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M3 18v-6a9 9 0 0114.88-6.82"/><path d="M21 12v6"/></svg></span>`;
-                } else if (u.muted) {
-                    iconsHtml = `<span class="muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6"/></svg></span>`;
-                }
-
-                return `
-          <div class="room-user-item" data-user-id="${u.id}">
-            <div class="room-user-avatar" style="background: ${isSelf ? currentUser.avatarColor : (u.avatarColor || '#5865F2')}" data-speaking-id="${u.id}">
-              ${avatarContent}
-            </div>
-            <span class="room-user-name">${u.username}${isSelf ? ' (คุณ)' : ''}</span>
-            <div class="room-user-icons">${iconsHtml}</div>
-          </div>
-        `;
+                if (u.deafened) iconsHtml = `<span class="deafened"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M3 18v-6a9 9 0 0114.88-6.82"/><path d="M21 12v6"/></svg></span>`;
+                else if (u.muted) iconsHtml = `<span class="muted"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6"/></svg></span>`;
+                return `<div class="room-user-item" data-user-id="${u.id}"><div class="room-user-avatar" style="background:${color}" data-speaking-id="${u.id}">${avatarContent}</div><span class="room-user-name">${u.username}${isSelf ? ' (คุณ)' : ''}</span><div class="room-user-icons">${iconsHtml}</div></div>`;
             }).join('');
 
+            const deleteBtn = (!room.isDefault && room.createdBy === currentUser?.id) ? `<button class="btn-delete-room" data-room-id="${room.id}" title="ลบห้อง">×</button>` : '';
+
             item.innerHTML = `
-        <div class="room-header-row">
-          <span class="room-name">${room.name}</span>
-          <span class="room-user-count">${room.users.length}/${room.maxUsers}</span>
-        </div>
-        ${room.users.length > 0 ? `<div class="room-users-list">${usersHtml}</div>` : ''}
-      `;
+                <div class="room-header-row">
+                    <span class="room-name">${room.name}</span>
+                    <span class="room-user-count">${(room.users || []).length}/${room.maxUsers}</span>
+                    ${deleteBtn}
+                </div>
+                ${(room.users || []).length > 0 && isVoice ? `<div class="room-users-list">${usersHtml}</div>` : ''}
+            `;
 
             item.querySelector('.room-header-row').addEventListener('click', () => {
-                if (currentRoomId === room.id) return;
-                joinRoom(room.id);
+                if (isVoice) {
+                    if (currentRoomId === room.id) return;
+                    joinRoom(room.id);
+                } else {
+                    openRoomChat(room.id, room.name);
+                }
             });
 
-            roomListEl.appendChild(item);
+            const delBtn = item.querySelector('.btn-delete-room');
+            if (delBtn) {
+                delBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteCustomRoom(delBtn.dataset.roomId);
+                });
+            }
+
+            targetEl.appendChild(item);
         });
     }
 
-    // ─── Join Room ──────────────────────────────────────────────
+    // ─── Join / Leave Room ──────────────────────────────────────
     function joinRoom(roomId) {
-        if (currentRoomId) {
-            leaveRoom();
-        }
+        if (currentRoomId) leaveRoom();
         socket.emit('room:join', { roomId });
     }
 
-    // ─── Leave Room ─────────────────────────────────────────────
     function leaveRoom() {
         if (!currentRoomId) return;
-
         socket.emit('room:leave');
-        if (voice) {
-            voice.destroy();
-            voice = null;
-        }
-
+        if (voice) { voice.destroy(); voice = null; }
         currentRoomId = null;
-        btnMute.disabled = true;
-        btnDeafen.disabled = true;
-        btnVoicemod.disabled = true;
-
-        // Reset share button
-        if (isSharingScreen) {
-            stopSharingUI();
-        }
+        btnMute.disabled = true; btnDeafen.disabled = true; btnVoicemod.disabled = true;
+        if (isSharingScreen) stopSharingUI();
         btnShare.disabled = true;
-
         btnDisconnect.classList.add('hidden');
         resetMuteDeafenUI();
-
-        // Hide music button and panel
         if (btnToggleMusic) btnToggleMusic.classList.add('hidden');
-        if (musicPanel) {
-            musicPanel.classList.add('hidden');
-            isMusicPanelOpen = false;
-        }
-
+        if (musicPanel) { musicPanel.classList.add('hidden'); isMusicPanelOpen = false; }
         showWelcomeView();
         updateUserPanel();
         showToast('👋', 'ออกจากห้องแล้ว', 'info');
@@ -531,185 +549,128 @@
     // ─── Show Views ─────────────────────────────────────────────
     function showRoomView(roomId) {
         welcomeView.classList.add('hidden');
+        chatView.classList.add('hidden');
         roomView.classList.remove('hidden');
-
         const room = roomsState[roomId];
-        if (room) {
-            currentRoomName.textContent = room.name;
-        }
-        renderRoomMembers();
+        if (room) currentRoomName.textContent = room.name;
         renderRoomMembers();
         updateUserPanel();
-
-        // Show Music Button
         if (btnToggleMusic) btnToggleMusic.classList.remove('hidden');
     }
 
     function showWelcomeView() {
         roomView.classList.add('hidden');
+        chatView.classList.add('hidden');
         welcomeView.classList.remove('hidden');
     }
 
-    // ─── Room Members Rendering ─────────────────────────────────
+    function showChatView() {
+        roomView.classList.add('hidden');
+        welcomeView.classList.add('hidden');
+        chatView.classList.remove('hidden');
+    }
+
+    // ─── Room Members ───────────────────────────────────────────
     function renderRoomMembers() {
         if (!currentRoomId || !roomsState[currentRoomId]) return;
-
         const room = roomsState[currentRoomId];
         roomMembersEl.innerHTML = '';
 
         room.users.forEach(u => {
-            const isSelf = u.id === currentUser?.id;
+            const isSelf = u.id === currentUser?.socketId;
             const card = document.createElement('div');
             card.className = 'member-card';
             card.id = `member-${u.id}`;
-            card.dataset.userId = u.id;
-
             if (u.muted) card.classList.add('muted');
 
-            const avatarContent = isSelf && userAvatarImage
-                ? `<img src="${userAvatarImage}" />`
-                : u.username.charAt(0).toUpperCase();
+            const avatarSrc = (isSelf && currentUser.avatarData) ? currentUser.avatarData : u.avatarData;
+            const avatarContent = avatarSrc ? `<img src="${avatarSrc}" />` : (u.username || 'U').charAt(0).toUpperCase();
+            const color = isSelf ? (currentUser.avatarColor || '#5865F2') : (u.avatarColor || '#5865F2');
 
             let statusIcons = '';
-            if (u.deafened) {
-                statusIcons += `<svg class="status-deafened" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="1" y1="1" x2="23" y2="23"/>
-          <path d="M3 18v-6a9 9 0 0114.88-6.82"/>
-          <path d="M21 12v6"/>
-        </svg>`;
-            } else if (u.muted) {
-                statusIcons += `<svg class="status-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="1" y1="1" x2="23" y2="23"/>
-          <path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6"/>
-        </svg>`;
-            }
+            if (u.deafened) statusIcons = `<svg class="status-deafened" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M3 18v-6a9 9 0 0114.88-6.82"/><path d="M21 12v6"/></svg>`;
+            else if (u.muted) statusIcons = `<svg class="status-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 005.12 2.12M15 9.34V4a3 3 0 00-5.94-.6"/></svg>`;
+
+            const volumeHtml = !isSelf ? `
+                <div class="volume-control-wrapper">
+                    <button class="btn-peer-mute" data-peer="${u.id}" title="Mute user">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                            <path d="M15.54 8.46a5 5 0 010 7.07"></path>
+                        </svg>
+                    </button>
+                    <input type="range" class="user-volume-slider" min="0" max="100" value="100" data-peer="${u.id}">
+                    <span class="volume-label">100%</span>
+                </div>` : '';
 
             card.innerHTML = `
-        <div class="member-avatar" style="background: ${isSelf ? currentUser.avatarColor : (u.avatarColor || '#5865F2')}">
-          ${avatarContent}
-        </div>
-        <div class="member-info">
-            <span class="member-name">${u.username}</span>
-            ${!isSelf ? `<input type="range" class="user-volume-slider" min="0" max="1" step="0.1" value="1" title="Volume">` : ''}
-        </div>
-        ${isSelf ? '<span class="member-tag you">คุณ</span>' : ''}
-        <div class="member-status">${statusIcons}</div>
-      `;
+                <div class="member-avatar" style="background:${color}">${avatarContent}</div>
+                <div class="member-info">
+                    <span class="member-name">${u.username}</span>
+                    ${volumeHtml}
+                </div>
+                ${isSelf ? '<span class="member-tag you">คุณ</span>' : ''}
+                <div class="member-status">${statusIcons}</div>
+            `;
 
             if (!isSelf) {
                 const slider = card.querySelector('.user-volume-slider');
-                slider.addEventListener('input', (e) => {
-                    if (voice) voice.setPeerVolume(u.id, e.target.value);
-                });
-                // Prevent card click when sliding
-                slider.addEventListener('click', (e) => e.stopPropagation());
+                const label = card.querySelector('.volume-label');
+                const muteBtn = card.querySelector('.btn-peer-mute');
+                if (slider) {
+                    slider.addEventListener('input', (e) => {
+                        const vol = parseInt(e.target.value);
+                        if (voice) voice.setPeerVolume(u.id, vol / 100);
+                        if (label) label.textContent = vol + '%';
+                    });
+                    slider.addEventListener('click', (e) => e.stopPropagation());
+                }
+                if (muteBtn) {
+                    muteBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const isNowMuted = muteBtn.classList.toggle('peer-muted');
+                        if (voice) voice.setPeerVolume(u.id, isNowMuted ? 0 : (slider ? slider.value / 100 : 1));
+                        if (slider) slider.disabled = isNowMuted;
+                    });
+                }
             }
-
             roomMembersEl.appendChild(card);
         });
     }
 
-    // ─── Update Specific Member States ──────────────────────────
     function updateMemberSpeaking(peerId, speaking) {
-        // Update main room member card
         const card = document.getElementById(`member-${peerId}`);
-        if (card) {
-            if (speaking) {
-                card.classList.add('speaking');
-            } else {
-                card.classList.remove('speaking');
-            }
-        }
-
-        // Update sidebar avatar
-        const sidebarAvatars = document.querySelectorAll(`[data-speaking-id="${peerId}"]`);
-        sidebarAvatars.forEach(el => {
-            if (speaking) {
-                el.classList.add('speaking');
-            } else {
-                el.classList.remove('speaking');
-            }
-        });
+        if (card) card.classList.toggle('speaking', speaking);
+        document.querySelectorAll(`[data-speaking-id="${peerId}"]`).forEach(el => el.classList.toggle('speaking', speaking));
     }
-
     function updateMemberMute(peerId, muted) {
         const card = document.getElementById(`member-${peerId}`);
-        if (card) {
-            if (muted) card.classList.add('muted');
-            else card.classList.remove('muted');
-        }
+        if (card) card.classList.toggle('muted', muted);
     }
 
-    function updateMemberDeafen(peerId, deafened) {
-        // Re-render to update icons
-        renderRoomMembers();
-        renderRoomList();
-    }
-
-    // ─── Mute / Deafen Controls ─────────────────────────────────
+    // ─── Mute / Deafen ──────────────────────────────────────────
     function resetMuteDeafenUI() {
-        // Sidebar buttons
-        btnMute.classList.remove('muted');
-        btnMute.querySelector('.icon-mic').classList.remove('hidden');
-        btnMute.querySelector('.icon-mic-off').classList.add('hidden');
-
-        btnDeafen.classList.remove('deafened');
-        btnDeafen.querySelector('.icon-headphone').classList.remove('hidden');
-        btnDeafen.querySelector('.icon-headphone-off').classList.add('hidden');
-
-        // Main buttons
-        btnMuteMain.classList.remove('muted');
-        btnMuteMain.querySelector('.icon-mic').classList.remove('hidden');
-        btnMuteMain.querySelector('.icon-mic-off').classList.add('hidden');
-
-        btnDeafenMain.classList.remove('deafened');
-        btnDeafenMain.querySelector('.icon-headphone').classList.remove('hidden');
-        btnDeafenMain.querySelector('.icon-headphone-off').classList.add('hidden');
+        [btnMute, btnMuteMain].forEach(b => { if (b) { b.classList.remove('muted'); b.querySelector('.icon-mic')?.classList.remove('hidden'); b.querySelector('.icon-mic-off')?.classList.add('hidden'); } });
+        [btnDeafen, btnDeafenMain].forEach(b => { if (b) { b.classList.remove('deafened'); b.querySelector('.icon-headphone')?.classList.remove('hidden'); b.querySelector('.icon-headphone-off')?.classList.add('hidden'); } });
     }
 
     function toggleMute() {
         if (!voice) return;
         const muted = voice.toggleMute();
         socket.emit('user:mute', { muted });
-
-        // Update sidebar mute btn
-        btnMute.classList.toggle('muted', muted);
-        btnMute.querySelector('.icon-mic').classList.toggle('hidden', muted);
-        btnMute.querySelector('.icon-mic-off').classList.toggle('hidden', !muted);
-
-        // Update main mute btn
-        btnMuteMain.classList.toggle('muted', muted);
-        btnMuteMain.querySelector('.icon-mic').classList.toggle('hidden', muted);
-        btnMuteMain.querySelector('.icon-mic-off').classList.toggle('hidden', !muted);
+        [btnMute, btnMuteMain].forEach(b => { if (b) { b.classList.toggle('muted', muted); b.querySelector('.icon-mic')?.classList.toggle('hidden', muted); b.querySelector('.icon-mic-off')?.classList.toggle('hidden', !muted); } });
     }
 
     function toggleDeafen() {
         if (!voice) return;
         const deafened = voice.toggleDeafen();
         socket.emit('user:deafen', { deafened });
-
-        // Update sidebar deafen btn
-        btnDeafen.classList.toggle('deafened', deafened);
-        btnDeafen.querySelector('.icon-headphone').classList.toggle('hidden', deafened);
-        btnDeafen.querySelector('.icon-headphone-off').classList.toggle('hidden', !deafened);
-
-        // Update main deafen btn
-        btnDeafenMain.classList.toggle('deafened', deafened);
-        btnDeafenMain.querySelector('.icon-headphone').classList.toggle('hidden', deafened);
-        btnDeafenMain.querySelector('.icon-headphone-off').classList.toggle('hidden', !deafened);
-
-        // When deafened, also show mute state
+        [btnDeafen, btnDeafenMain].forEach(b => { if (b) { b.classList.toggle('deafened', deafened); b.querySelector('.icon-headphone')?.classList.toggle('hidden', deafened); b.querySelector('.icon-headphone-off')?.classList.toggle('hidden', !deafened); } });
         if (deafened) {
-            btnMute.classList.add('muted');
-            btnMute.querySelector('.icon-mic').classList.add('hidden');
-            btnMute.querySelector('.icon-mic-off').classList.remove('hidden');
-            btnMuteMain.classList.add('muted');
-            btnMuteMain.querySelector('.icon-mic').classList.add('hidden');
-            btnMuteMain.querySelector('.icon-mic-off').classList.remove('hidden');
+            [btnMute, btnMuteMain].forEach(b => { if (b) { b.classList.add('muted'); b.querySelector('.icon-mic')?.classList.add('hidden'); b.querySelector('.icon-mic-off')?.classList.remove('hidden'); } });
         }
     }
 
-    // Button event listeners
     btnMute.addEventListener('click', toggleMute);
     btnDeafen.addEventListener('click', toggleDeafen);
     btnDisconnect.addEventListener('click', leaveRoom);
@@ -717,7 +678,7 @@
     btnDeafenMain.addEventListener('click', toggleDeafen);
     btnLeave.addEventListener('click', leaveRoom);
 
-    // ─── Toast Notifications ────────────────────────────────────
+    // ─── Toast ──────────────────────────────────────────────────
     function showToast(icon, message, type = 'info') {
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
@@ -726,25 +687,17 @@
         setTimeout(() => toast.remove(), 3000);
     }
 
-    // ─── Screen Sharing Logic ───────────────────────────────────
-
+    // ─── Screen Share ───────────────────────────────────────────
     btnShare.addEventListener('click', async () => {
         if (!voice) return;
-
         if (!isSharingScreen) {
             const stream = await voice.startScreenShare(socket);
             if (stream) {
                 isSharingScreen = true;
                 btnShare.classList.add('sharing');
                 showToast('📺', 'เริ่มแชร์หน้าจอ', 'success');
-
-                // Show local screen share
-                updateMemberVideo(currentUser.id, stream, true);
-
-                // Handle system stop (e.g. user clicks "Stop sharing" in browser UI)
-                stream.getVideoTracks()[0].onended = () => {
-                    stopSharingUI();
-                };
+                updateMemberVideo(currentUser.socketId, stream, true);
+                stream.getVideoTracks()[0].onended = () => stopSharingUI();
             }
         } else {
             voice.stopScreenShare(socket);
@@ -755,420 +708,309 @@
     function stopSharingUI() {
         isSharingScreen = false;
         btnShare.classList.remove('sharing');
-        updateMemberVideo(currentUser.id, null, false);
+        updateMemberVideo(currentUser.socketId, null, false);
         showToast('⏹️', 'หยุดแชร์หน้าจอ', 'info');
     }
 
-    // ─── VoiceMod Logic ─────────────────────────────────────────
-
-    btnVoicemod.addEventListener('click', () => {
-        voicemodModal.classList.remove('hidden');
-    });
-
-    btnCloseVoicemod.addEventListener('click', () => {
-        voicemodModal.classList.add('hidden');
-    });
-
-    // Close on outside click
-    voicemodModal.addEventListener('click', (e) => {
-        if (e.target === voicemodModal) {
-            voicemodModal.classList.add('hidden');
-        }
-    });
+    // ─── VoiceMod ───────────────────────────────────────────────
+    btnVoicemod.addEventListener('click', () => voicemodModal.classList.remove('hidden'));
+    btnCloseVoicemod.addEventListener('click', () => voicemodModal.classList.add('hidden'));
+    voicemodModal.addEventListener('click', (e) => { if (e.target === voicemodModal) voicemodModal.classList.add('hidden'); });
 
     effectBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-            const effect = btn.dataset.effect;
-            const effectName = btn.querySelector('.effect-name').textContent;
-
-            if (voice) {
-                voice.setEffect(effect);
-
-                // Update UI
-                effectBtns.forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                currentEffectNameEl.textContent = effectName;
-
-                // Toggle active state on main button
-                if (effect === 'normal') {
-                    btnVoicemod.classList.remove('active');
-                } else {
-                    btnVoicemod.classList.add('active');
-                }
-
-                showToast('🎤', `Changed voice to ${effectName}`, 'success');
-            }
+            if (!voice) return;
+            voice.setEffect(btn.dataset.effect);
+            effectBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            currentEffectNameEl.textContent = btn.querySelector('.effect-name').textContent;
+            btnVoicemod.classList.toggle('active', btn.dataset.effect !== 'normal');
+            showToast('🎤', `เปลี่ยนเสียงเป็น ${btn.querySelector('.effect-name').textContent}`, 'success');
         });
     });
 
-    // ─── Video UI Handling ──────────────────────────────────────
+    // ─── Video UI ───────────────────────────────────────────────
     function updateMemberVideo(peerId, stream, isAdding) {
         const card = document.getElementById(`member-${peerId}`);
         if (!card) return;
-
         if (isAdding && stream) {
             card.classList.add('has-video');
-
-            // Check if video already exists
             let video = card.querySelector('video');
             if (!video) {
                 video = document.createElement('video');
-                video.autoplay = true;
-                video.playsInline = true;
-                if (peerId === currentUser.id) video.muted = true; // Mute self video
-
-                // Click to toggle fullscreen
-                video.style.cursor = 'pointer';
-                video.title = 'Click to Fullscreen';
+                video.autoplay = true; video.playsInline = true;
+                if (peerId === currentUser.socketId) video.muted = true;
+                video.style.cursor = 'pointer'; video.title = 'Click for Fullscreen';
                 video.addEventListener('click', () => {
-                    if (document.fullscreenElement) {
-                        document.exitFullscreen();
-                    } else {
-                        video.requestFullscreen().catch(err => {
-                            console.warn('Error attempting to enable full-screen mode:', err);
-                        });
-                    }
+                    if (document.fullscreenElement) document.exitFullscreen();
+                    else video.requestFullscreen().catch(() => { });
                 });
-
                 card.prepend(video);
             }
             video.srcObject = stream;
         } else {
             card.classList.remove('has-video');
             const video = card.querySelector('video');
-            if (video) {
-                video.srcObject = null;
-                video.remove();
-            }
+            if (video) { video.srcObject = null; video.remove(); }
         }
+    }
+
+    // ─── Online Users Panel ─────────────────────────────────────
+    function renderOnlineUsers() {
+        if (!onlineUsersList) return;
+        onlineUsersList.innerHTML = '';
+        onlineUsers.forEach(u => {
+            const isSelf = u.visitorId === currentUser?.id;
+            const item = document.createElement('div');
+            item.className = 'online-user-item';
+            const avatarSrc = isSelf ? (currentUser.avatarData || u.avatarData) : u.avatarData;
+            const letter = (u.username || 'U').charAt(0).toUpperCase();
+            const displayName = isSelf ? `${u.username} (คุณ)` : u.username;
+            item.innerHTML = `
+                <div class="online-user-avatar" style="background:${u.avatarColor || '#5865F2'}">
+                    ${avatarSrc ? `<img src="${avatarSrc}" />` : letter}
+                    <div class="online-indicator"></div>
+                </div>
+                <div class="online-user-info">
+                    <span class="online-user-name">${displayName}</span>
+                    <span class="online-user-status">${u.roomId ? '🔊 ในห้องเสียง' : 'ออนไลน์'}</span>
+                </div>
+            `;
+            if (!isSelf) {
+                item.addEventListener('click', () => {
+                    if (u.visitorId) openDM(u.visitorId, u.username);
+                });
+                item.style.cursor = 'pointer';
+            }
+            onlineUsersList.appendChild(item);
+        });
+    }
+
+    // ─── Direct Messaging ───────────────────────────────────────
+    async function openDM(userId, username) {
+        currentChatTarget = { type: 'dm', userId, username };
+        chatHeaderIcon.textContent = '💬';
+        chatHeaderName.textContent = username;
+        showChatView();
+        chatMessages.innerHTML = '<div class="chat-loading">กำลังโหลด...</div>';
+        try {
+            const res = await fetch(`/api/messages/dm/${userId}`);
+            const data = await res.json();
+            chatMessages.innerHTML = '';
+            (data.messages || []).forEach(msg => appendMessage(msg));
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        } catch (e) { chatMessages.innerHTML = '<div class="chat-loading">ไม่สามารถโหลดข้อความได้</div>'; }
+    }
+
+    async function openRoomChat(roomId, roomName) {
+        currentChatTarget = { type: 'room', roomId, roomName };
+        chatHeaderIcon.textContent = '💬';
+        chatHeaderName.textContent = roomName;
+        showChatView();
+        renderRoomList();
+        chatMessages.innerHTML = '<div class="chat-loading">กำลังโหลด...</div>';
+        try {
+            const res = await fetch(`/api/messages/room/${roomId}`);
+            const data = await res.json();
+            chatMessages.innerHTML = '';
+            (data.messages || []).forEach(msg => appendMessage(msg));
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        } catch (e) { chatMessages.innerHTML = '<div class="chat-loading">ไม่สามารถโหลดข้อความได้</div>'; }
+    }
+
+    function appendMessage(msg) {
+        const div = document.createElement('div');
+        const isSelf = msg.sender_id === currentUser?.id;
+        div.className = `chat-message ${isSelf ? 'self' : ''}`;
+        const time = new Date(msg.created_at).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+        div.innerHTML = `
+            <div class="msg-avatar" style="background:${msg.sender_color || '#5865F2'}">
+                ${msg.sender_avatar ? `<img src="${msg.sender_avatar}" />` : (msg.sender_username || 'U').charAt(0).toUpperCase()}
+            </div>
+            <div class="msg-content">
+                <div class="msg-header">
+                    <span class="msg-author">${msg.sender_username}</span>
+                    <span class="msg-time">${time}</span>
+                </div>
+                <div class="msg-text">${escapeHTML(msg.content)}</div>
+            </div>
+        `;
+        chatMessages.appendChild(div);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function escapeHTML(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function sendMessage() {
+        if (!chatInput || !currentChatTarget || !socket) return;
+        const content = chatInput.value.trim();
+        if (!content) return;
+        if (currentChatTarget.type === 'dm') {
+            socket.emit('message:send', { receiverId: currentChatTarget.userId, content });
+        } else if (currentChatTarget.type === 'room') {
+            socket.emit('message:send', { roomId: currentChatTarget.roomId, content });
+        }
+        chatInput.value = '';
+    }
+
+    if (btnSendMessage) btnSendMessage.addEventListener('click', sendMessage);
+    if (chatInput) chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
+
+    // ─── Create / Delete Room ───────────────────────────────────
+    let pendingRoomType = 'voice';
+
+    function openCreateRoomModal(type) {
+        pendingRoomType = type;
+        createRoomModal.classList.remove('hidden');
+        roomTypeBtns.forEach(b => b.classList.toggle('active', b.dataset.type === type));
+    }
+
+    btnAddVoiceRoom.addEventListener('click', () => openCreateRoomModal('voice'));
+    btnAddTextRoom.addEventListener('click', () => openCreateRoomModal('text'));
+    btnCancelRoom.addEventListener('click', () => createRoomModal.classList.add('hidden'));
+    createRoomModal.addEventListener('click', (e) => { if (e.target === createRoomModal) createRoomModal.classList.add('hidden'); });
+
+    roomTypeBtns.forEach(b => {
+        b.addEventListener('click', () => {
+            pendingRoomType = b.dataset.type;
+            roomTypeBtns.forEach(x => x.classList.toggle('active', x === b));
+        });
+    });
+
+    btnCreateRoom.addEventListener('click', async () => {
+        const name = document.getElementById('new-room-name').value.trim();
+        const maxUsers = document.getElementById('new-room-max').value;
+        if (!name) { showToast('⚠️', 'กรุณาใส่ชื่อห้อง', 'error'); return; }
+        try {
+            const res = await fetch('/api/rooms', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, type: pendingRoomType, maxUsers })
+            });
+            const data = await res.json();
+            if (!res.ok) { showToast('⚠️', data.error, 'error'); return; }
+            createRoomModal.classList.add('hidden');
+            document.getElementById('new-room-name').value = '';
+            showToast('✅', 'สร้างห้องสำเร็จ', 'success');
+        } catch (e) { showToast('⚠️', 'เกิดข้อผิดพลาด', 'error'); }
+    });
+
+    async function deleteCustomRoom(roomId) {
+        showAlert('ลบห้อง', 'คุณแน่ใจหรือไม่ว่าต้องการลบห้องนี้?', 'warning', async () => {
+            try {
+                const res = await fetch(`/api/rooms/${roomId}`, { method: 'DELETE' });
+                if (res.ok) showToast('✅', 'ลบห้องแล้ว', 'success');
+                else { const d = await res.json(); showToast('⚠️', d.error, 'error'); }
+            } catch (e) { showToast('⚠️', 'เกิดข้อผิดพลาด', 'error'); }
+        }, () => { });
     }
 
     // ─── Keyboard Shortcuts ─────────────────────────────────────
     document.addEventListener('keydown', (e) => {
-        // M to toggle mute
-        if (e.key === 'm' && !e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT') {
-            toggleMute();
-        }
-        // D to toggle deafen
-        if (e.key === 'd' && !e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT') {
-            toggleDeafen();
-        }
-        // S to toggle screen share (New)
-        if (e.key === 's' && !e.ctrlKey && !e.metaKey && document.activeElement.tagName !== 'INPUT') {
-            if (btnShare && !btnShare.disabled) btnShare.click();
-        }
-        // Escape to close modal
+        if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
+        if (e.key === 'm' && !e.ctrlKey) toggleMute();
+        if (e.key === 'd' && !e.ctrlKey) toggleDeafen();
+        if (e.key === 's' && !e.ctrlKey && btnShare && !btnShare.disabled) btnShare.click();
         if (e.key === 'Escape') {
-            const modal = document.querySelector('.modal-overlay');
-            if (modal) modal.remove();
+            const modal = document.querySelector('.modal-overlay:not(.hidden)');
+            if (modal && !modal.id?.includes('alert')) modal.classList.add('hidden');
         }
     });
 
-
     // ─── Music Player Logic ─────────────────────────────────────
-
-    // Variables moved to top scope for accessibility:
-    // musicPanel, btnToggleMusic, btnCloseMusic, etc. are now defined at the top.
-
-    // State is also defined at the top:
-    // player, isMusicPanelOpen, musicState, progressInterval
-
-    // ─── YouTube Player Setup ───────────────────────────────────
     window.onYouTubeIframeAPIReady = () => {
         player = new YT.Player('youtube-player', {
-            height: '1',
-            width: '1',
-            videoId: '',
-            playerVars: {
-                'playsinline': 1,
-                'controls': 0,
-                'disablekb': 1,
-                'autoplay': 1
-            },
-            events: {
-                'onReady': onPlayerReady,
-                'onStateChange': onPlayerStateChange,
-                'onError': onPlayerError
-            }
+            height: '1', width: '1', videoId: '',
+            playerVars: { playsinline: 1, controls: 0, disablekb: 1, autoplay: 1 },
+            events: { onReady: onPlayerReady, onStateChange: onPlayerStateChange, onError: onPlayerError }
         });
     };
 
-    function onPlayerReady(event) {
-        console.log("YouTube Player Ready");
-        player.setVolume(100);
-        syncMusicPlayer();
-    }
-
+    function onPlayerReady() { player.setVolume(100); syncMusicPlayer(); }
     function onPlayerError(event) {
-        console.error("YouTube Player Error code:", event.data);
-        let errorMsg = "Music Error";
-        switch (event.data) {
-            case 2: errorMsg = "Invalid Parameter"; break;
-            case 5: errorMsg = "HTML5 Error"; break;
-            case 100: errorMsg = "Video Not Found"; break;
-            case 101:
-            case 150: errorMsg = "Video Restricted (Copyright)"; break;
-        }
-        showToast('⚠️', errorMsg, 'error');
+        const msgs = { 2: 'Invalid Parameter', 5: 'HTML5 Error', 100: 'Video Not Found', 101: 'Copyright Restricted', 150: 'Copyright Restricted' };
+        showToast('⚠️', msgs[event.data] || 'Music Error', 'error');
     }
-
     function onPlayerStateChange(event) {
-        if (event.data === YT.PlayerState.ENDED) {
-            // Song ended, tell server to play next
-            // We only need one client to do this, but server handles dedup usually
-            // Or typically the server handles timing, but for simple sync we can have clients report
-            if (socket) socket.emit('music:ended');
-        }
+        if (event.data === YT.PlayerState.ENDED && socket) socket.emit('music:ended');
     }
 
-    // ─── Music Layout & Events ──────────────────────────────────
-    if (btnToggleMusic) {
-        btnToggleMusic.addEventListener('click', () => {
-            isMusicPanelOpen = !isMusicPanelOpen;
-            if (isMusicPanelOpen) {
-                musicPanel.classList.remove('hidden');
-            } else {
-                musicPanel.classList.add('hidden');
-            }
-        });
-    }
+    if (btnToggleMusic) btnToggleMusic.addEventListener('click', () => { isMusicPanelOpen = !isMusicPanelOpen; musicPanel.classList.toggle('hidden', !isMusicPanelOpen); });
+    if (btnCloseMusic) btnCloseMusic.addEventListener('click', () => { isMusicPanelOpen = false; musicPanel.classList.add('hidden'); });
 
-    if (btnCloseMusic) {
-        btnCloseMusic.addEventListener('click', () => {
-            isMusicPanelOpen = false;
-            musicPanel.classList.add('hidden');
-        });
-    }
+    function searchMusic() { const q = musicSearchInput.value.trim(); if (q && socket) socket.emit('music:search', q); }
+    if (btnSearchMusic) btnSearchMusic.addEventListener('click', searchMusic);
+    if (musicSearchInput) musicSearchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') searchMusic(); });
 
-    function searchMusic() {
-        const query = musicSearchInput.value.trim();
-        if (!query) return;
-        if (socket) socket.emit('music:search', query);
-    }
+    if (btnTogglePlay) btnTogglePlay.addEventListener('click', () => {
+        if (!player || !socket) return;
+        socket.emit(player.getPlayerState() === YT.PlayerState.PLAYING ? 'music:pause' : 'music:resume');
+    });
+    if (btnSkipMusic) btnSkipMusic.addEventListener('click', () => { if (socket) { socket.emit('music:skip'); showToast('⏭️', 'Skipping...', 'info'); } });
+    if (btnStopMusic) btnStopMusic.addEventListener('click', () => { if (socket) socket.emit('music:stop'); });
+    if (volumeSlider) volumeSlider.addEventListener('input', (e) => { if (player?.setVolume) player.setVolume(e.target.value); });
 
-    if (btnSearchMusic) {
-        btnSearchMusic.addEventListener('click', searchMusic);
-    }
-
-    if (musicSearchInput) {
-        musicSearchInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') searchMusic();
-        });
-    }
-
-    // Play/Pause/Skip/Stop
-    if (btnTogglePlay) {
-        btnTogglePlay.addEventListener('click', () => {
-            if (!player) return;
-            const state = player.getPlayerState();
-            if (state === YT.PlayerState.PLAYING) {
-                if (socket) socket.emit('music:pause');
-            } else {
-                if (socket) socket.emit('music:resume');
-            }
-        });
-    }
-
-    if (btnSkipMusic) {
-        btnSkipMusic.addEventListener('click', () => {
-            if (socket) {
-                socket.emit('music:skip');
-                showToast('⏭️', 'Skipping...', 'info');
-            }
-        });
-    }
-
-    if (btnStopMusic) {
-        btnStopMusic.addEventListener('click', () => {
-            if (socket) socket.emit('music:stop');
-        });
-    }
-
-    if (volumeSlider) {
-        volumeSlider.addEventListener('input', (e) => {
-            if (player && player.setVolume) {
-                player.setVolume(e.target.value);
-            }
-        });
-    }
-
-
-    window.setupMusicListeners = (socketRef) => {
-        socket = socketRef;
-
-        socket.on('music:search-results', (results) => {
-            renderSearchResults(results);
-        });
-
-        socket.on('music:error', (msg) => {
-            showToast('⚠️', msg, 'error');
-        });
-
-        socket.on('music:state', (state) => {
-            console.log('[Music] State received:', state);
-            musicState = state;
-            updateMusicUI();
-            syncMusicPlayer();
-        });
-
-        socket.on('music:play', (song) => {
-            showToast('🎵', `Playing: ${song.title}`, 'info');
-            btnToggleMusic.classList.remove('hidden');
-        });
-
+    window.setupMusicListeners = (s) => {
+        socket = s;
+        socket.on('music:search-results', renderSearchResults);
+        socket.on('music:error', (msg) => showToast('⚠️', msg, 'error'));
+        socket.on('music:state', (state) => { musicState = state; updateMusicUI(); syncMusicPlayer(); });
+        socket.on('music:play', (song) => { showToast('🎵', `Playing: ${song.title}`, 'info'); btnToggleMusic?.classList.remove('hidden'); });
         socket.on('music:stop', () => {
-            if (player && player.stopVideo) player.stopVideo();
+            if (player?.stopVideo) player.stopVideo();
             musicState = { queue: [], current: null, isPlaying: false, startTime: 0 };
-            updateMusicUI();
-            showToast('🛑', 'Music Stopped', 'info');
+            updateMusicUI(); showToast('🛑', 'Music Stopped', 'info');
         });
     };
 
     function syncMusicPlayer() {
-        if (!player || !player.loadVideoById) {
-            console.warn('[Music] Player not ready yet');
-            return;
-        }
-
+        if (!player || !player.loadVideoById) return;
         if (musicState.isPlaying && musicState.current) {
-            const currentVideoData = player.getVideoData();
-            // Calculate start time (handle negative drift)
-            let startSeconds = (Date.now() - musicState.startTime) / 1000;
-            if (startSeconds < 0) startSeconds = 0;
-
-            // If different video, load it
-            if (!currentVideoData || currentVideoData.video_id !== musicState.current.videoId) {
-                console.log('[Music] Loading new video:', musicState.current.videoId, 'at', startSeconds);
-                player.loadVideoById(musicState.current.videoId, startSeconds);
-                return;
-            } else {
-                // Even if video ID matches, if we are in unstarted/cued state, we must ensure play
-                const ps = player.getPlayerState();
-                if (ps === -1 || ps === 5) { // -1 unstarted, 5 cued
-                    player.loadVideoById(musicState.current.videoId, startSeconds);
-                    return;
-                }
-            }
-
-            // If same video but state mismatch
-            const playerState = player.getPlayerState();
-            if (playerState !== YT.PlayerState.PLAYING && playerState !== YT.PlayerState.BUFFERING) {
-                console.log('[Music] Resuming video');
-                player.playVideo();
-            }
-
-            // Sync time if drift > 2s
-            const currentPlayerTime = player.getCurrentTime();
-            if (Math.abs(startSeconds - currentPlayerTime) > 2) {
-                console.log('[Music] Syncing time. Server:', startSeconds, 'Player:', currentPlayerTime);
-                player.seekTo(startSeconds, true);
-            }
+            const cvd = player.getVideoData();
+            let startSeconds = Math.max(0, (Date.now() - musicState.startTime) / 1000);
+            if (!cvd || cvd.video_id !== musicState.current.videoId) { player.loadVideoById(musicState.current.videoId, startSeconds); return; }
+            const ps = player.getPlayerState();
+            if (ps === -1 || ps === 5) { player.loadVideoById(musicState.current.videoId, startSeconds); return; }
+            if (ps !== YT.PlayerState.PLAYING && ps !== YT.PlayerState.BUFFERING) player.playVideo();
+            if (Math.abs(startSeconds - player.getCurrentTime()) > 2) player.seekTo(startSeconds, true);
         } else {
-            // Not playing
-            const playerState = player.getPlayerState();
-            if (playerState === YT.PlayerState.PLAYING || playerState === YT.PlayerState.BUFFERING) {
-                player.pauseVideo();
-            }
+            const ps = player.getPlayerState();
+            if (ps === YT.PlayerState.PLAYING || ps === YT.PlayerState.BUFFERING) player.pauseVideo();
         }
     }
 
-
-
     function renderSearchResults(results) {
-        searchResults.innerHTML = '';
-        if (!results || results.length === 0) {
-            searchResults.classList.add('hidden');
-            return;
-        }
-
         searchResults.classList.remove('hidden');
-        results.forEach(video => {
-            const div = document.createElement('div');
-            div.className = 'search-result-item';
-            div.innerHTML = `
-                <img src="${video.thumbnail}" alt="${video.title}">
-                <div class="result-info">
-                    <div class="result-title">${video.title}</div>
-                    <div class="result-channel">${video.channelTitle}</div>
-                </div>
-            `;
-            div.onclick = () => {
-                // Optimistic play for requester (bypass Autoplay Policy)
-                if (player && player.loadVideoById) {
-                    // Add protection against re-loading the optimistically played video
-                    if (!musicState.current || musicState.current.videoId !== video.videoId) {
-                        player.loadVideoById(video.videoId);
-                    }
-                    player.playVideo();
-                }
-                socket.emit('music:play', { videoId: video.videoId, title: video.title, thumbnail: video.thumbnail });
-                searchResults.classList.add('hidden');
-                musicSearchInput.value = '';
-            };
-            searchResults.appendChild(div);
+        searchResults.innerHTML = results.map(r => `
+            <div class="search-result-item" data-video-id="${r.videoId}">
+                <img src="${r.thumbnail}" class="result-thumb" alt="">
+                <div class="result-info"><div class="result-title">${r.title}</div><div class="result-channel">${r.channelTitle} • ${r.duration}</div></div>
+                <button class="btn-add-song">+</button>
+            </div>
+        `).join('');
+        searchResults.querySelectorAll('.btn-add-song').forEach((btn, i) => {
+            btn.addEventListener('click', () => {
+                if (socket) socket.emit('music:add', results[i]);
+                showToast('🎵', `Added: ${results[i].title.slice(0, 30)}`, 'success');
+            });
         });
     }
 
     function updateMusicUI() {
-        // Queue
-        queueList.innerHTML = '';
-        if (musicState.queue) {
-            musicState.queue.forEach((song, index) => {
-                const div = document.createElement('div');
-                div.className = 'queue-item';
-                div.innerHTML = `
-                    <span class="queue-index">${index + 1}</span>
-                    <span class="queue-title">${song.title}</span>
-                    <span class="queue-user">${song.addedBy}</span>
-                `;
-                queueList.appendChild(div);
-            });
-        }
-
-        // Current Song
         if (musicState.current) {
             currentSongContainer.classList.remove('hidden');
+            currentSongImg.src = musicState.current.thumbnail || '';
             currentSongTitle.textContent = musicState.current.title;
             currentSongAddedBy.textContent = `Added by ${musicState.current.addedBy}`;
-            currentSongImg.src = musicState.current.thumbnail || '';
-
-            // Update Play/Pause Icon
-            if (musicState.isPlaying) {
-                iconPlay.classList.add('hidden');
-                iconPause.classList.remove('hidden');
-            } else {
-                iconPlay.classList.remove('hidden');
-                iconPause.classList.add('hidden');
-            }
-
-            // Start progress bar
-            if (progressInterval) clearInterval(progressInterval);
-            progressInterval = setInterval(() => {
-                let elapsed = 0;
-                if (musicState.isPlaying) {
-                    elapsed = Date.now() - musicState.startTime;
-                } else if (musicState.pausedAt) {
-                    elapsed = musicState.pausedAt - musicState.startTime;
-                } else {
-                    return;
-                }
-
-                // Simple progress estimation
-                const duration = musicState.current.duration || 0; // ms
-                if (duration > 0) {
-                    const percent = Math.min((elapsed / duration) * 100, 100);
-                    songProgressBar.style.width = `${percent}%`;
-                }
-            }, 500);
-
         } else {
             currentSongContainer.classList.add('hidden');
-            songProgressBar.style.width = '0%';
-            if (progressInterval) clearInterval(progressInterval);
-            // Default to pause icon hidden (or play visible)
-            iconPlay.classList.remove('hidden');
-            iconPause.classList.add('hidden');
         }
+        queueList.innerHTML = (musicState.queue || []).map((s, i) => `
+            <div class="queue-item"><span class="queue-pos">${i + 1}</span><span class="queue-title">${s.title}</span><span class="queue-by">${s.addedBy}</span></div>
+        `).join('') || '<div class="queue-empty">คิวว่าง</div>';
     }
 
 })();
