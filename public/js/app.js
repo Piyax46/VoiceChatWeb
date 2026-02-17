@@ -528,6 +528,7 @@
 
     // ─── Join / Leave Room ──────────────────────────────────────
     function joinRoom(roomId) {
+        resumeAudioContext();
         if (currentRoomId) leaveRoom();
         socket.emit('room:join', { roomId });
     }
@@ -922,6 +923,20 @@
             if (modal && !modal.id?.includes('alert')) modal.classList.add('hidden');
         }
     });
+
+    // ─── Audio Unlock (Autoplay Policy) ─────────────────────────
+    function resumeAudioContext() {
+        if (player && player.unMute) {
+            player.unMute();
+            if (musicState.isPlaying && player.getPlayerState() !== YT.PlayerState.PLAYING) {
+                player.playVideo();
+            }
+        }
+    }
+
+    document.addEventListener('click', resumeAudioContext, { once: false });
+    document.addEventListener('keydown', resumeAudioContext, { once: false });
+
 
     // ─── Music Player Logic ─────────────────────────────────────
     window.onYouTubeIframeAPIReady = () => {
