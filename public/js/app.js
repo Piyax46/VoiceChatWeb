@@ -926,15 +926,21 @@
 
     // ─── Audio Unlock (Autoplay Policy) ─────────────────────────
     function resumeAudioContext() {
-        if (player && player.unMute) {
-            player.unMute();
-            if (musicState.isPlaying && player.getPlayerState() !== YT.PlayerState.PLAYING) {
-                player.playVideo();
-            }
-            // Hide unmute button if it exists
-            const btn = document.getElementById('btn-force-unmute');
-            if (btn) btn.classList.add('hidden');
+        if (!player || typeof player.getPlayerState !== 'function') return;
+
+        // Always try to unmute
+        if (player.unMute) player.unMute();
+
+        const state = player.getPlayerState();
+        // Only force play if we are supposedly playing but player is paused/cued/unstarted
+        // Do NOT restart if buffering (3) or already playing (1)
+        if (musicState.isPlaying && (state === YT.PlayerState.PAUSED || state === YT.PlayerState.CUED || state === -1)) {
+            player.playVideo();
         }
+
+        // Hide unmute button if audio context is likely resumed
+        const btn = document.getElementById('btn-force-unmute');
+        if (btn) btn.classList.add('hidden');
     }
 
     document.addEventListener('click', resumeAudioContext, { once: false });
