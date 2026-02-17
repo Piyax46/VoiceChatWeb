@@ -44,6 +44,19 @@ function createWindow() {
         return { action: 'deny' };
     });
 
+    // Explicitly allow audio
+    mainWindow.webContents.setAudioMuted(false);
+
+    // Permission Handler
+    mainWindow.webContents.session.setPermissionRequestHandler((webContents, permission, callback) => {
+        const allowedPermissions = ['media', 'audioCapture', 'videoCapture', 'notifications'];
+        if (allowedPermissions.includes(permission)) {
+            callback(true);
+        } else {
+            callback(false);
+        }
+    });
+
     // Handle Screen Share Permissions
     mainWindow.webContents.session.setDisplayMediaRequestHandler((request, callback) => {
         desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 400, height: 400 } }).then((sources) => {

@@ -988,7 +988,9 @@
     function onPlayerReady() { player.setVolume(100); syncMusicPlayer(); }
     function onPlayerError(event) {
         const msgs = { 2: 'Invalid Parameter', 5: 'HTML5 Error', 100: 'Video Not Found', 101: 'Copyright Restricted', 150: 'Copyright Restricted' };
-        showToast('⚠️', msgs[event.data] || 'Music Error', 'error');
+        const msg = msgs[event.data] || 'Unknown Error';
+        console.error('[YouTube] Player Error:', event.data, msg);
+        showToast('⚠️', `Music Error: ${msg} (${event.data})`, 'error');
     }
     function onPlayerStateChange(event) {
         if (event.data === YT.PlayerState.ENDED && socket) socket.emit('music:ended');
