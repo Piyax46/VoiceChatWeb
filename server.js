@@ -539,6 +539,7 @@ io.on('connection', (socket) => {
   socket.on('music:play', async (songData) => {
     const user = users.get(socket.id);
     if (!user || !user.roomId) return;
+    console.log(`[Music] Play request from ${user.username} in room ${user.roomId}:`, songData.title);
     if (!musicStates.has(user.roomId)) {
       musicStates.set(user.roomId, { queue: [], current: null, isPlaying: false, startTime: 0 });
     }
@@ -555,6 +556,7 @@ io.on('connection', (socket) => {
   socket.on('music:add', async ({ videoId, title, thumbnail, duration }) => {
     const user = users.get(socket.id);
     if (!user || !user.roomId) return;
+    console.log(`[Music] Add request from ${user.username} in room ${user.roomId}:`, title);
     if (!musicStates.has(user.roomId)) {
       musicStates.set(user.roomId, { queue: [], current: null, isPlaying: false, startTime: 0 });
     }
@@ -572,6 +574,7 @@ io.on('connection', (socket) => {
   socket.on('music:skip', () => {
     const user = users.get(socket.id);
     if (!user || !user.roomId) return;
+    console.log(`[Music] Skip request from ${user.username}`);
     const state = musicStates.get(user.roomId);
     if (state) {
       if (state.queue.length > 0) {
@@ -586,6 +589,7 @@ io.on('connection', (socket) => {
   socket.on('music:stop', () => {
     const user = users.get(socket.id);
     if (!user || !user.roomId) return;
+    console.log(`[Music] Stop request from ${user.username}`);
     stopMusic(user.roomId);
   });
 
@@ -599,6 +603,7 @@ io.on('connection', (socket) => {
   socket.on('music:pause', () => {
     const user = users.get(socket.id);
     if (!user || !user.roomId) return;
+    console.log(`[Music] Pause request from ${user.username}`);
     const state = musicStates.get(user.roomId);
     if (state && state.isPlaying) {
       state.isPlaying = false;
@@ -637,6 +642,7 @@ io.on('connection', (socket) => {
 });
 
 function playSong(roomId, song) {
+  console.log(`[Music] Playing in room ${roomId}: ${song.title}`);
   const state = musicStates.get(roomId);
   if (!state) return;
   state.current = song;

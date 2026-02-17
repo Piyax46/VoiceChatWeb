@@ -970,9 +970,17 @@
 
     // ─── Music Player Logic ─────────────────────────────────────
     window.onYouTubeIframeAPIReady = () => {
+        console.log('[YouTube] API Ready');
         player = new YT.Player('youtube-player', {
-            height: '1', width: '1', videoId: '',
-            playerVars: { playsinline: 1, controls: 0, disablekb: 1, autoplay: 1 },
+            height: '100%', width: '100%', videoId: '',
+            playerVars: {
+                playsinline: 1,
+                controls: 0,
+                disablekb: 1,
+                autoplay: 1,
+                enablejsapi: 1,
+                origin: window.location.origin
+            },
             events: { onReady: onPlayerReady, onStateChange: onPlayerStateChange, onError: onPlayerError }
         });
     };
