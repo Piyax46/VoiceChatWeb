@@ -1022,8 +1022,9 @@
             const currentVideoData = player.getVideoData();
             const playerState = player.getPlayerState();
 
-            // Load video if not loaded or different video
+            // Load new video if needed
             if (!currentVideoData || currentVideoData.video_id !== musicState.current.videoId) {
+                console.log('[Music] Loading new video:', musicState.current.title);
                 player.loadVideoById({
                     videoId: musicState.current.videoId,
                     startSeconds: currentTime
@@ -1031,19 +1032,30 @@
                 return;
             }
 
-            // Seek if drift > 2 seconds
+            // Sync time if drift > 2s
             if (Math.abs(currentTime - player.getCurrentTime()) > 2) {
+                console.log('[Music] Syncing time. Drift:', Math.abs(currentTime - player.getCurrentTime()));
                 player.seekTo(currentTime, true);
             }
 
-            // Ensure playing
+            // Force play if state is not playing/buffering
             if (playerState !== YT.PlayerState.PLAYING && playerState !== YT.PlayerState.BUFFERING) {
+                console.log('[Music] Force playing. Current state:', playerState);
                 player.playVideo();
+
+                // If still unstarted (-1) after trying to play, browser might be blocking
+                // We show the Unmute button to request user interaction
+                if (playerState === -1 || playerState === YT.PlayerState.CUED) {
+                    showUnmuteButton();
+                }
             }
 
-            // Check if actually muted or blocked
+            // Check if muted by browser policy
             if (player.isMuted() || player.getVolume() === 0) {
-                showUnmuteButton();
+                // Try to unmute automatically first
+                player.unMute();
+                player.setVolume(100);
+                if (player.isMuted()) showUnmuteButton();
             }
         } else {
             const playerState = player.getPlayerState();
