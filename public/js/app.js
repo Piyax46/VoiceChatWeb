@@ -1034,7 +1034,7 @@
                 item.className = 'screen-source-item';
                 item.innerHTML = `
                     <div class="source-preview">
-                        <img src="${source.thumbnail.toDataURL()}" />
+                        <img src="${source.thumbnail}" />
                     </div>
                     <div class="source-name">${source.name}</div>
                 `;

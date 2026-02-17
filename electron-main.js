@@ -8,6 +8,7 @@ app.commandLine.appendSwitch('enable-features', 'V8VmFuture');
 
 let mainWindow;
 let screenPickerCallback = null;
+let storedScreenSources = [];
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -44,9 +45,17 @@ function createWindow() {
 
     // Handle Screen Share Permissions
     mainWindow.webContents.session.setDisplayMediaRequestHandler((request, callback) => {
-        desktopCapturer.getSources({ types: ['screen', 'window'] }).then((sources) => {
+        desktopCapturer.getSources({ types: ['screen', 'window'], thumbnailSize: { width: 400, height: 400 } }).then((sources) => {
             screenPickerCallback = callback;
-            mainWindow.webContents.send('get-screen-sources', sources);
+            storedScreenSources = sources; // Store actual objects for later retrieval
+
+            // Serialize sources to ensure thumbnails are sent correctly
+            const sourcesToSend = sources.map(source => ({
+                id: source.id,
+                name: source.name,
+                thumbnail: source.thumbnail.toDataURL()
+            }));
+            mainWindow.webContents.send('get-screen-sources', sourcesToSend);
         }).catch((e) => {
             console.error(e);
             callback({ video: sources[0], audio: 'loopback' }); // Fallback
@@ -55,8 +64,18 @@ function createWindow() {
 
     ipcMain.on('select-screen-source', (event, sourceId) => {
         if (screenPickerCallback) {
-            screenPickerCallback({ video: { id: sourceId }, audio: 'loopback' });
+            const source = storedScreenSources.find(s => s.id === sourceId);
+            if (source) {
+                screenPickerCallback({ video: source, audio: 'loopback' });
+            } else {
+                // Handle cancellation or not found, maybe cancel request?
+                // For now, if not found, we might just letting it hang or logs error.
+                // It is safer to select the first one or cancellation if possible.
+                // screenPickerCallback(null); // This might throw, better to just log
+                console.warn('Selected source not found');
+            }
             screenPickerCallback = null;
+            storedScreenSources = [];
         }
     });
 
