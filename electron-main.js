@@ -1,11 +1,13 @@
 const { app, BrowserWindow, shell, desktopCapturer, ipcMain } = require('electron');
 const path = require('path');
 
-// Memory optimization flags
+// Performance & rendering flags
 app.commandLine.appendSwitch('js-flags', '--max-old-space-size=256');
-app.commandLine.appendSwitch('disable-gpu-compositing');
 app.commandLine.appendSwitch('enable-features', 'V8VmFuture');
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
+// Enable hardware acceleration for glassmorphism & backdrop-filter
+app.commandLine.appendSwitch('enable-gpu-rasterization');
+app.commandLine.appendSwitch('enable-zero-copy');
 
 let mainWindow;
 let screenPickerCallback = null;
@@ -72,8 +74,9 @@ function createWindow() {
             }));
             mainWindow.webContents.send('get-screen-sources', sourcesToSend);
         }).catch((e) => {
-            console.error(e);
-            callback({ video: sources[0], audio: 'loopback' }); // Fallback
+            console.error('[ScreenShare] Error getting sources:', e);
+            // Cancel the request on error instead of crashing
+            callback({});
         });
     });
 

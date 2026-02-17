@@ -743,11 +743,26 @@
             if (!video) {
                 video = document.createElement('video');
                 video.autoplay = true; video.playsInline = true;
-                video.controls = true; // Enable native controls for reliability
+                video.controls = true;
                 if (peerId === currentUser.socketId) video.muted = true;
-                video.title = 'Click Fullscreen Button';
+                video.title = 'Double-click for Fullscreen';
 
-                // Rely on native controls for fullscreen
+                // Fullscreen on double click with Electron fallback
+                video.addEventListener('dblclick', () => {
+                    try {
+                        if (document.fullscreenElement) {
+                            document.exitFullscreen();
+                        } else if (video.requestFullscreen) {
+                            video.requestFullscreen();
+                        } else if (video.webkitRequestFullscreen) {
+                            video.webkitRequestFullscreen();
+                        } else if (video.webkitEnterFullscreen) {
+                            video.webkitEnterFullscreen();
+                        }
+                    } catch (e) {
+                        console.warn('[Video] Fullscreen failed:', e);
+                    }
+                });
                 card.prepend(video);
             }
             video.srcObject = stream;
@@ -911,6 +926,151 @@
         }, () => { });
     }
 
+    // ─── Audio Settings Modal ────────────────────────────────────
+    const btnSettings = document.getElementById('btn-settings');
+    if (btnSettings) {
+        btnSettings.addEventListener('click', openSettingsModal);
+    }
+
+    async function openSettingsModal() {
+        const existing = document.getElementById('settings-modal-overlay');
+        if (existing) existing.remove();
+
+        const devices = await VoiceEngine.getAudioDevices();
+        const savedInput = localStorage.getItem('audioInputDevice') || '';
+        const savedOutput = localStorage.getItem('audioOutputDevice') || '';
+
+        const inputOptions = devices.inputs.map(d =>
+            `<option value="${d.deviceId}" ${d.deviceId === savedInput ? 'selected' : ''}>${d.label || 'Microphone ' + d.deviceId.slice(0, 4)}</option>`
+        ).join('');
+        const outputOptions = devices.outputs.map(d =>
+            `<option value="${d.deviceId}" ${d.deviceId === savedOutput ? 'selected' : ''}>${d.label || 'Speaker ' + d.deviceId.slice(0, 4)}</option>`
+        ).join('');
+
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-overlay';
+        overlay.id = 'settings-modal-overlay';
+        overlay.innerHTML = `
+            <div class="modal-card settings-modal-card">
+                <h3 class="modal-title">⚙️ Audio Settings</h3>
+                <div class="settings-section">
+                    <label class="settings-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                            <rect x="9" y="1" width="6" height="11" rx="3"/>
+                            <path d="M5 10a7 7 0 0014 0"/>
+                            <line x1="12" y1="17" x2="12" y2="21"/>
+                        </svg>
+                        Microphone (Input)
+                    </label>
+                    <select id="settings-input-device" class="settings-select">${inputOptions}</select>
+                    <div class="mic-test-container">
+                        <button class="btn-modal btn-test-mic" id="btn-test-mic">🎤 Test Mic</button>
+                        <div class="mic-level-bar" id="mic-level-bar">
+                            <div class="mic-level-fill" id="mic-level-fill"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <label class="settings-label">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                            <path d="M3 18v-6a9 9 0 0118 0v6"/>
+                            <path d="M21 19a2 2 0 01-2 2h-1a2 2 0 01-2-2v-3a2 2 0 012-2h3zM3 19a2 2 0 002 2h1a2 2 0 002-2v-3a2 2 0 00-2-2H3z"/>
+                        </svg>
+                        Speaker (Output)
+                    </label>
+                    <select id="settings-output-device" class="settings-select">${outputOptions}</select>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-modal btn-modal-cancel" id="btn-settings-cancel">Cancel</button>
+                    <button class="btn-modal btn-modal-save" id="btn-settings-save">Save</button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+
+        // Test mic handler
+        let testStream = null;
+        let testContext = null;
+        let testInterval = null;
+        const btnTestMic = overlay.querySelector('#btn-test-mic');
+        const micLevelFill = overlay.querySelector('#mic-level-fill');
+
+        btnTestMic.addEventListener('click', async () => {
+            if (testStream) {
+                // Stop test
+                testStream.getTracks().forEach(t => t.stop());
+                testStream = null;
+                if (testContext) testContext.close();
+                if (testInterval) clearInterval(testInterval);
+                micLevelFill.style.width = '0%';
+                btnTestMic.textContent = '🎤 Test Mic';
+                return;
+            }
+            try {
+                const deviceId = overlay.querySelector('#settings-input-device').value;
+                testStream = await navigator.mediaDevices.getUserMedia({
+                    audio: deviceId ? { deviceId: { exact: deviceId } } : true
+                });
+                testContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = testContext.createMediaStreamSource(testStream);
+                const analyser = testContext.createAnalyser();
+                analyser.fftSize = 256;
+                source.connect(analyser);
+                const dataArray = new Uint8Array(analyser.frequencyBinCount);
+                btnTestMic.textContent = '⏹️ Stop Test';
+
+                testInterval = setInterval(() => {
+                    analyser.getByteFrequencyData(dataArray);
+                    const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+                    const pct = Math.min(100, (avg / 128) * 100);
+                    micLevelFill.style.width = pct + '%';
+                    micLevelFill.style.background = pct > 60 ? '#ED4245' : pct > 30 ? '#FAA61A' : '#57F287';
+                }, 50);
+            } catch (e) {
+                showToast('⚠️', 'Cannot access microphone', 'error');
+            }
+        });
+
+        // Close handlers
+        overlay.querySelector('#btn-settings-cancel').addEventListener('click', () => {
+            if (testStream) testStream.getTracks().forEach(t => t.stop());
+            if (testContext) testContext.close();
+            if (testInterval) clearInterval(testInterval);
+            overlay.remove();
+        });
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                if (testStream) testStream.getTracks().forEach(t => t.stop());
+                if (testContext) testContext.close();
+                if (testInterval) clearInterval(testInterval);
+                overlay.remove();
+            }
+        });
+
+        // Save handler
+        overlay.querySelector('#btn-settings-save').addEventListener('click', async () => {
+            const inputDeviceId = overlay.querySelector('#settings-input-device').value;
+            const outputDeviceId = overlay.querySelector('#settings-output-device').value;
+
+            localStorage.setItem('audioInputDevice', inputDeviceId);
+            localStorage.setItem('audioOutputDevice', outputDeviceId);
+
+            if (voice && inputDeviceId) {
+                const ok = await voice.switchInputDevice(inputDeviceId);
+                if (!ok) showToast('⚠️', 'Failed to switch microphone', 'error');
+            }
+            if (voice && outputDeviceId) {
+                await voice.switchOutputDevice(outputDeviceId);
+            }
+
+            if (testStream) testStream.getTracks().forEach(t => t.stop());
+            if (testContext) testContext.close();
+            if (testInterval) clearInterval(testInterval);
+            overlay.remove();
+            showToast('✅', 'Audio settings saved', 'success');
+        });
+    }
+
     // ─── Keyboard Shortcuts ─────────────────────────────────────
     document.addEventListener('keydown', (e) => {
         if (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA') return;
@@ -975,6 +1135,7 @@
             playerVars: {
                 playsinline: 1,
                 controls: 0,
+                disablekb: 1,
                 autoplay: 1,
                 enablejsapi: 1
             },

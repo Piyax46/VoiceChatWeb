@@ -51,7 +51,13 @@ class VoiceEngine {
     // Initialize local audio stream
     async init() {
         try {
-            this.localStream = await navigator.mediaDevices.getUserMedia(this.audioConstraints);
+            // Use saved device if available
+            const savedInputDevice = localStorage.getItem('audioInputDevice');
+            const constraints = { ...this.audioConstraints };
+            if (savedInputDevice) {
+                constraints.audio = { ...constraints.audio, deviceId: { ideal: savedInputDevice } };
+            }
+            this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
 
             // Initialize Audio Processing
             await this.initAudioProcessing();
@@ -982,6 +988,95 @@ class VoiceEngine {
         this.isMuted = false;
         this.isDeafened = false;
         this.isSpeaking = false;
+    }
+
+    // ─── Audio Device Selection ──────────────────────────────────
+
+    static async getAudioDevices() {
+        try {
+            // Request permission first to get labels
+            await navigator.mediaDevices.getUserMedia({ audio: true });
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            return {
+                inputs: devices.filter(d => d.kind === 'audioinput'),
+                outputs: devices.filter(d => d.kind === 'audiooutput')
+            };
+        } catch (e) {
+            console.error('[Voice] Error enumerating devices:', e);
+            return { inputs: [], outputs: [] };
+        }
+    }
+
+    async switchInputDevice(deviceId) {
+        try {
+            const constraints = {
+                audio: {
+                    ...this.audioConstraints.audio,
+                    deviceId: { exact: deviceId }
+                },
+                video: false
+            };
+            const newStream = await navigator.mediaDevices.getUserMedia(constraints);
+
+            // Stop old tracks
+            if (this.localStream) {
+                this.localStream.getTracks().forEach(t => t.stop());
+            }
+            this.localStream = newStream;
+
+            // Re-init audio processing
+            if (this.voiceContext) {
+                this.voiceSource.disconnect();
+                this.effectNodes.forEach(n => { try { n.disconnect(); } catch (e) { } });
+                this.effectNodes = [];
+                this.voiceSource = this.voiceContext.createMediaStreamSource(this.localStream);
+                this.setEffect(this.currentEffect);
+            }
+
+            // Replace audio tracks in all peer connections
+            const newTrack = this.getProcessedStream().getAudioTracks()[0];
+            this.peers.forEach(peerData => {
+                if (peerData.pc) {
+                    const senders = peerData.pc.getSenders();
+                    const audioSender = senders.find(s => s.track && s.track.kind === 'audio');
+                    if (audioSender) {
+                        audioSender.replaceTrack(newTrack);
+                    }
+                }
+            });
+
+            // Re-setup speaking detection
+            this.setupSpeakingDetection();
+            console.log('[Voice] Switched input device to:', deviceId);
+            return true;
+        } catch (e) {
+            console.error('[Voice] Failed to switch input device:', e);
+            return false;
+        }
+    }
+
+    async switchOutputDevice(deviceId) {
+        try {
+            this.peers.forEach(peerData => {
+                if (peerData.audioEl && typeof peerData.audioEl.setSinkId === 'function') {
+                    peerData.audioEl.setSinkId(deviceId).catch(e => {
+                        console.warn('[Voice] setSinkId failed:', e);
+                    });
+                }
+            });
+            console.log('[Voice] Switched output device to:', deviceId);
+            return true;
+        } catch (e) {
+            console.error('[Voice] Failed to switch output device:', e);
+            return false;
+        }
+    }
+
+    getProcessedStream() {
+        if (this.voiceDestination && this.voiceDestination.stream) {
+            return this.voiceDestination.stream;
+        }
+        return this.localStream;
     }
 }
 
