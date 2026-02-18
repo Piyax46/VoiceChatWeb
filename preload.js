@@ -8,5 +8,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Window controls
     minimizeWindow: () => ipcRenderer.send('window-minimize'),
     maximizeWindow: () => ipcRenderer.send('window-maximize'),
-    closeWindow: () => ipcRenderer.send('window-close')
+    closeWindow: () => ipcRenderer.send('window-close'),
+
+    // App control
+    logout: () => ipcRenderer.send('app-logout')
 });

@@ -233,6 +233,16 @@ function createWindow() {
         if (mainWindow) mainWindow.close();
     });
 
+    // App Control IPC
+    ipcMain.on('app-logout', async () => {
+        if (mainWindow) {
+            // Clear cache and storage
+            await mainWindow.webContents.session.clearStorageData({ storages: ['localstorage', 'cookies', 'cache'] });
+            // Force reload to root
+            mainWindow.reload();
+        }
+    });
+
     mainWindow.on('closed', function () {
         mainWindow = null;
     });

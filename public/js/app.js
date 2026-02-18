@@ -354,11 +354,15 @@
         });
 
         socket.on('session:kicked', ({ reason }) => {
-            if (voice) { voice.cleanup(); voice = null; }
+            try {
+                if (voice) { voice.destroy(); voice = null; }
+            } catch (e) {
+                console.error("Voice destroy failed", e);
+            }
             socket.disconnect();
             showAlert('ออกจากระบบ', reason || 'บัญชีนี้ถูกเข้าสู่ระบบจากที่อื่น', 'error', () => {
                 localStorage.removeItem('token');
-                location.reload();
+                window.location.href = '/';
             });
         });
         socket.on('reconnect', () => {
@@ -754,15 +758,27 @@
     btnLeave.addEventListener('click', leaveRoom);
 
     // ─── Logout ──────────────────────────────────────────────────
+    // ─── Logout ──────────────────────────────────────────────────
     const btnLogout = document.getElementById('btn-logout');
     if (btnLogout) {
         btnLogout.addEventListener('click', () => {
-            if (voice) { voice.cleanup(); voice = null; }
+            try {
+                if (voice) { voice.destroy(); voice = null; }
+            } catch (e) {
+                console.error("Voice destroy failed", e);
+            }
             if (socket) socket.disconnect();
+
+            // Clear storage
             localStorage.removeItem('token');
-            fetch('/api/logout', { method: 'POST' }).finally(() => {
-                location.reload();
-            });
+            localStorage.removeItem('audioInputDevice');
+
+            // Electron or Web Navigation
+            if (window.electronAPI && window.electronAPI.logout) {
+                window.electronAPI.logout();
+            } else {
+                window.location.href = '/';
+            }
         });
     }
 
@@ -1292,17 +1308,27 @@
     });
 
     // ─── Audio Unlock (Autoplay Policy) ─────────────────────────
+    // ─── Audio Unlock (Autoplay Policy) ─────────────────────────
     function resumeAudioContext() {
-        if (!player || typeof player.getPlayerState !== 'function') return;
+        // Music Player Unlock
+        if (player && typeof player.getPlayerState === 'function') {
+            // Always try to unmute
+            if (player.unMute) player.unMute();
 
-        // Always try to unmute
-        if (player.unMute) player.unMute();
+            const state = player.getPlayerState();
+            // Only force play if we are supposedly playing but player is paused/cued/unstarted
+            if (musicState.isPlaying && (state === YT.PlayerState.PAUSED || state === YT.PlayerState.CUED || state === -1)) {
+                player.playVideo();
+            }
+        }
 
-        const state = player.getPlayerState();
-        // Only force play if we are supposedly playing but player is paused/cued/unstarted
-        // Do NOT restart if buffering (3) or already playing (1)
-        if (musicState.isPlaying && (state === YT.PlayerState.PAUSED || state === YT.PlayerState.CUED || state === -1)) {
-            player.playVideo();
+        // Cinema Player Unlock
+        if (cinemaPlayer && typeof cinemaPlayer.getPlayerState === 'function') {
+            if (cinemaPlayer.unMute) cinemaPlayer.unMute();
+            const cState = cinemaPlayer.getPlayerState();
+            if (cinemaState.isPlaying && (cState === YT.PlayerState.PAUSED || cState === YT.PlayerState.CUED || cState === -1)) {
+                cinemaPlayer.playVideo();
+            }
         }
 
         // Hide unmute button if audio context is likely resumed
